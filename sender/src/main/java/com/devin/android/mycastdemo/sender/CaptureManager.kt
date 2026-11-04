@@ -16,6 +16,7 @@ import android.os.Handler
 import android.os.Looper
 import com.devin.android.cast.core.CaptureConfig
 import com.devin.android.cast.core.FrameProtocol
+import com.devin.android.cast.core.logDebug
 import com.devin.android.cast.core.logInfo
 import timber.log.Timber
 
@@ -80,9 +81,8 @@ class CaptureManager private constructor(
         private var lastBufferStampMs: Long = 0L
 
         override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: BufferInfo) {
-            // 完全替代你原来的 drainEncoder 逻辑
+            logDebug("info flag=${info.flags}, size=${info.size}, offset=${info.offset}, timeUs=${info.presentationTimeUs}", clazzName = "MediaCodec-Callback")
             if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
-                logInfo("info flag=${info.flags}, size=${info.size}, offset=${info.offset}, timeUs=${info.presentationTimeUs}", clazzName = "MediaCodec-Callback")
                 val configBuffer = codec.getOutputBuffer(index)
                 if (configBuffer != null) {
                     val data = ByteArray(info.size)
@@ -91,7 +91,6 @@ class CaptureManager private constructor(
                     callback?.onOutputBufferAvailable(videoBytes)
                 }
             } else if (info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME != 0) {
-                logInfo("info flag=${info.flags}, size=${info.size}, offset=${info.offset}, timeUs=${info.presentationTimeUs}", clazzName = "MediaCodec-Callback")
                 val configBuffer = codec.getOutputBuffer(index)
                 if (configBuffer != null) {
                     val data = ByteArray(info.size)
@@ -100,12 +99,10 @@ class CaptureManager private constructor(
                     callback?.onOutputBufferAvailable(videoBytes)
                 }
             } else if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                logInfo("info flag=${info.flags}, size=${info.size}, offset=${info.offset}, timeUs=${info.presentationTimeUs}", clazzName = "MediaCodec-Callback")
                 //TODO
             } else {
                 if (info.presentationTimeUs - lastBufferStampMs > 500) {
                     lastBufferStampMs = info.presentationTimeUs
-                    logInfo("info flag=${info.flags}, size=${info.size}, offset=${info.offset}, timeUs=${info.presentationTimeUs}", clazzName = "MediaCodec-Callback")
                 }
 
                 if (info.size > 0) {

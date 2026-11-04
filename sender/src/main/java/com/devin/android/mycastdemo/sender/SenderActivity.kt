@@ -63,7 +63,9 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
 
         override fun onServiceDisconnected(name: ComponentName) {
             logInfo()
+            screenCaptureService?.webSocketServerCallback = null
             screenCaptureService = null
+            isBindService = false
         }
     }
 
@@ -84,9 +86,11 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
             )
         }
         findViewById<View>(R.id.btnStop).setOnClickListener {
-            unbindService(serviceConnection)
+            if (isBindService) {
+                unbindService(serviceConnection)
+                isBindService = false
+            }
             stopService(Intent(this, ScreenCaptureService::class.java))
-            Toast.makeText(this, "已停止投屏", Toast.LENGTH_SHORT).show()
         }
 
         resetSizeInfo()
@@ -106,7 +110,9 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(this)
-        unbindService(serviceConnection)
+        if (isBindService) {
+            unbindService(serviceConnection)
+        }
         stopWebsocketServer()
     }
 

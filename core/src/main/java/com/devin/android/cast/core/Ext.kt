@@ -4,6 +4,17 @@ import androidx.core.text.isDigitsOnly
 import timber.log.Timber
 import java.util.logging.Level
 
+inline fun logDebug(
+    message: String = "",
+    clazzName: String? = null,
+) {
+    val trace = Throwable().stackTrace[0]
+    val className = clazzName ?: parentClassName(trace.className.substringAfterLast("."))
+    val methodName = trace.methodName
+    val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: ""}"
+    log(className, text, Level.CONFIG)
+}
+
 inline fun logInfo(
     message: String = "",
     clazzName: String? = null,
@@ -12,8 +23,7 @@ inline fun logInfo(
     val className = clazzName ?: parentClassName(trace.className.substringAfterLast("."))
     val methodName = trace.methodName
     val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: ""}"
-    Timber.tag("DL-$className").i(text)
-    log(className, text)
+    log(className, text, Level.INFO)
 }
 
 inline fun logWarn(
