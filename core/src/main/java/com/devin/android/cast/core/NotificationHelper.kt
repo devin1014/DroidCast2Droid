@@ -1,11 +1,12 @@
-package com.devin.android.mycastdemo.sender
+package com.devin.android.cast.core
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
-import android.os.Build
-import androidx.core.app.NotificationCompat
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
+import androidx.core.app.NotificationCompat.Builder
 
 object NotificationHelper {
 
@@ -17,7 +18,7 @@ object NotificationHelper {
         importance: Int = NotificationManager.IMPORTANCE_LOW,
     ) {
         // Android 8.0 not need notification channel
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (VERSION.SDK_INT < VERSION_CODES.O) return
         // Channel
         val channel = NotificationChannel(id, name, importance).apply {
             this.description = description
@@ -35,7 +36,7 @@ object NotificationHelper {
         icon: Int,
         serviceType: Int,
     ) {
-        val notification = NotificationCompat.Builder(applicationContext, channelId)
+        val notification = Builder(applicationContext, channelId)
             .setContentTitle(title)
             .setContentText(description)
             .setSmallIcon(icon)
@@ -43,7 +44,7 @@ object NotificationHelper {
             .build()
 
         // Android 14
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (VERSION.SDK_INT >= VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(id, notification, serviceType)
         } else {
             startForeground(id, notification)

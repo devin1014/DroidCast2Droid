@@ -14,10 +14,11 @@ import android.os.IBinder
 import androidx.activity.result.ActivityResult
 import androidx.core.content.ContextCompat
 import com.devin.android.cast.core.CaptureConfig
+import com.devin.android.cast.core.NotificationHelper
 import com.devin.android.cast.core.logInfo
 import com.devin.android.mycastdemo.R
-import com.devin.android.mycastdemo.sender.NotificationHelper.startForegroundWithNotification
-import com.devin.android.mycastdemo.sender.NotificationHelper.stopForegroundNotification
+import com.devin.android.cast.core.NotificationHelper.startForegroundWithNotification
+import com.devin.android.cast.core.NotificationHelper.stopForegroundNotification
 
 class ScreenCaptureService : Service() {
 

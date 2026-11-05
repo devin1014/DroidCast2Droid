@@ -16,11 +16,14 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.devin.android.cast.core.Utils
+import com.devin.android.cast.core.bindServiceCompat
 import com.devin.android.cast.core.logInfo
+import com.devin.android.cast.core.startForegroundServiceCompat
+import com.devin.android.cast.core.stopServiceCompat
 import com.devin.android.mycastdemo.R
 import com.devin.android.mycastdemo.sender.CaptureManager.OnCodecOutputCallback
-import com.devin.android.mycastdemo.sender.websocket.MyWebSocketServer.SenderWebSocketServerCallback
-import com.devin.android.mycastdemo.sender.websocket.MyWebSocketService
+import com.devin.android.mycastdemo.sender.websocket.WebSocketServer.SenderWebSocketServerCallback
+import com.devin.android.mycastdemo.sender.websocket.WebSocketService
 import org.java_websocket.WebSocket
 import timber.log.Timber
 import java.text.SimpleDateFormat
@@ -54,7 +57,7 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
 
     private var screenCaptureService: ScreenCaptureService? = null
     private var isBindCaptureService = false
-    private var websocketService: MyWebSocketService? = null
+    private var websocketService: WebSocketService? = null
     private var isBindWebsocketService = false
 
     private val screenCaptureConnection = object : ServiceConnection {
@@ -78,7 +81,7 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
     private val websocketConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             logInfo()
-            ((service as MyWebSocketService.LocalBinder).getService()).also {
+            ((service as WebSocketService.LocalBinder).getService()).also {
                 it.webSocketServerCallback = this@SenderActivity
                 websocketService = it
             }
@@ -107,13 +110,12 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
         setContentView(R.layout.activity_sender)
         Timber.plant(Timber.DebugTree())
 
-        MyWebSocketService.startForegroundService(this)
-        MyWebSocketService.bindService(this, websocketConnection)
+        startForegroundServiceCompat<WebSocketService>(this)
+        bindServiceCompat<WebSocketService>(this, websocketConnection)
 
         findViewById<View>(R.id.btnStart).setOnClickListener {
             screenCaptureLauncher.launch(
-                (getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager)
-                    .createScreenCaptureIntent()
+                (getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager).createScreenCaptureIntent()
             )
         }
         findViewById<View>(R.id.btnStop).setOnClickListener {
@@ -141,12 +143,12 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
         // capture service
         if (isBindCaptureService) {
             unbindService(screenCaptureConnection)
-            stopService(Intent(this, ScreenCaptureService::class.java))
+            stopServiceCompat<ScreenCaptureService>(this)
         }
         // websocket service
         if (isBindWebsocketService) {
             unbindService(websocketConnection)
-            stopService(Intent(this, MyWebSocketService::class.java))
+            stopServiceCompat<WebSocketService>(this)
         }
         super.onDestroy()
     }

@@ -2,49 +2,31 @@ package com.devin.android.mycastdemo.sender.websocket
 
 import android.annotation.SuppressLint
 import android.app.NotificationManager
-import android.content.Context
 import android.content.Intent
-import android.content.ServiceConnection
 import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.IBinder
-import androidx.core.content.ContextCompat
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.service.BaseService
 import com.devin.android.mycastdemo.R
-import com.devin.android.mycastdemo.sender.NotificationHelper
-import com.devin.android.mycastdemo.sender.NotificationHelper.startForegroundWithNotification
-import com.devin.android.mycastdemo.sender.websocket.MyWebSocketServer.SenderWebSocketServerCallback
+import com.devin.android.cast.core.NotificationHelper
+import com.devin.android.cast.core.NotificationHelper.startForegroundWithNotification
+import com.devin.android.mycastdemo.sender.websocket.WebSocketServer.SenderWebSocketServerCallback
 import org.java_websocket.WebSocket
 
-class MyWebSocketService : BaseService() {
+class WebSocketService : BaseService() {
 
     companion object {
         private const val CHANNEL_ID = "websocket_server_channel"
         private const val NOTIFICATION_ID = 2001
-
-        fun startForegroundService(context: Context) {
-            ContextCompat.startForegroundService(
-                context,
-                Intent(context, MyWebSocketService::class.java)
-            )
-        }
-
-        fun bindService(context: Context, conn: ServiceConnection) {
-            context.bindService(
-                Intent(context, MyWebSocketService::class.java),
-                conn,
-                BIND_AUTO_CREATE
-            )
-        }
     }
 
     inner class LocalBinder : Binder() {
-        fun getService(): MyWebSocketService = this@MyWebSocketService
+        fun getService(): WebSocketService = this@WebSocketService
     }
 
     private val binder = LocalBinder()
-    private var wsServer: MyWebSocketServer? = null
+    private var wsServer: WebSocketServer? = null
     var webSocketServerCallback: SenderWebSocketServerCallback? = null
 
     override fun onCreate() {
@@ -81,7 +63,7 @@ class MyWebSocketService : BaseService() {
     private fun startWebsocketServer() {
         logInfo()
         if (wsServer == null) {
-            MyWebSocketServer(
+            WebSocketServer(
                 port = 8080,
                 callback = object : SenderWebSocketServerCallback {
                     override fun onClientConnected(conn: WebSocket) {

@@ -1,5 +1,10 @@
 package com.devin.android.cast.core
 
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import androidx.core.content.ContextCompat
 import androidx.core.text.isDigitsOnly
 import timber.log.Timber
 import java.util.logging.Level
@@ -66,4 +71,33 @@ fun log(
 fun parentClassName(name: String): String {
     if (!name.contains("$")) return name
     return "$${name.split("$").last { !it.isDigitsOnly() && it != "lambda" }}"
+}
+
+// ------------------------------------------------------------------
+// ---- Service
+// ------------------------------------------------------------------
+inline fun <reified T : Service> startForegroundServiceCompat(context: Context) {
+    ContextCompat.startForegroundService(
+        context,
+        Intent(context, T::class.java)
+    )
+}
+
+inline fun <reified T : Service> stopServiceCompat(context: Context) {
+    context.stopService(
+        Intent(context, T::class.java)
+    )
+}
+
+
+inline fun <reified T : Service> bindServiceCompat(
+    context: Context,
+    conn: ServiceConnection,
+    flags: Int = Context.BIND_AUTO_CREATE,
+) {
+    context.bindService(
+        Intent(context, T::class.java),
+        conn,
+        flags
+    )
 }

@@ -2,11 +2,16 @@ package com.devin.android.cast.core.service
 
 import android.app.Service
 import android.content.Intent
+import android.os.Binder
 import android.os.IBinder
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.logWarn
 
 abstract class BaseService : Service() {
+
+    inner class LocalBinder : Binder() {
+        fun getService(): BaseService = this@BaseService
+    }
 
     override fun onCreate() {
         super.onCreate()

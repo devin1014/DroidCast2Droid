@@ -4,14 +4,13 @@ import com.devin.android.cast.core.logDebug
 import com.devin.android.cast.core.logInfo
 import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
-import org.java_websocket.server.WebSocketServer
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 
-class MyWebSocketServer(
+class WebSocketServer(
     port: Int,
     private val callback: SenderWebSocketServerCallback,
-) : WebSocketServer(InetSocketAddress(port)) {
+) : org.java_websocket.server.WebSocketServer(InetSocketAddress(port)) {
 
     interface SenderWebSocketServerCallback {
         fun onClientConnected(conn: WebSocket) {}

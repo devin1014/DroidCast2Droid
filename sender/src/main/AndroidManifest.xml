@@ -37,7 +37,7 @@
             android:foregroundServiceType="mediaProjection" />
 
         <service
-            android:name=".sender.websocket.MyWebSocketService"
+            android:name=".sender.websocket.WebSocketService"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
     </application>
