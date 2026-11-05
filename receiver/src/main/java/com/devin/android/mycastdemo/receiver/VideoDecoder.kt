@@ -4,7 +4,9 @@ import android.media.MediaCodec
 import android.media.MediaCodec.BufferInfo
 import android.media.MediaFormat
 import android.view.Surface
+import com.devin.android.cast.core.logDebug
 import com.devin.android.cast.core.logInfo
+import com.devin.android.cast.core.logWarn
 import com.devin.android.mycastdemo.receiver.FrameData.VideoConfigData
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -75,17 +77,19 @@ class VideoDecoder private constructor() : Thread() {
     fun release() {
         inputQueue.clear()
         val codec = mediaCodec ?: return
+        logWarn()
         try {
             codec.stop()
             codec.release()
             interrupted()
+            mediaCodec = null
         } catch (_: Exception) {
         }
     }
 
     override fun run() {
-        super.run()
         decodeLoop()
+        logWarn("${this::class.simpleName} done...")
     }
 
     private fun decodeLoop() {
@@ -106,7 +110,7 @@ class VideoDecoder private constructor() : Thread() {
                     if (packet.data.size > 4) {
                         // 打印每帧数据的前 5 个字节的十六进制
                         val hexString = packet.data.take(5).joinToString(" ") { String.format("%02X", it) }
-                        logInfo("▶ 喂入输入端 Size: ${packet.data.size}, 前5字节: $hexString, 是否关键帧: ${packet.isKeyFrame}", clazzName = "DecodeLoop")
+                        logDebug("▶ input ==> size: ${packet.data.size}, 前5字节: $hexString, 是否关键帧: ${packet.isKeyFrame}", clazzName = "DecodeLoop")
                     }
 
                     // 如果你坚持要在循环中处理配置帧，请保留这段；如果已经在外层 configure 时传入了 CSD，可直接删掉此 if
@@ -146,18 +150,12 @@ class VideoDecoder private constructor() : Thread() {
                     }
                 }
             } catch (e: IllegalStateException) {
-                logInfo("Input dequeue IllegalStateException: ${e.message}")
-                val cause = e.cause
-                if (cause is MediaCodec.CodecException) {
-                    // 如果是底层硬解芯片报错，能在这里抓到诊断信息
-                    logInfo("★ 底层解码芯片致命错误! IsTransient: ${cause.isTransient}, IsRecoverable: ${cause.isRecoverable}, ErrorCode: ${cause.errorCode}", clazzName = "DecodeLoop")
-                } else {
-                    logInfo("★ 纯应用层状态错误 (可能未调用 start() 或在其他线程被 reset): ${e.message}", clazzName = "DecodeLoop")
-                }
+                logInfo("Input dequeue IllegalStateException: ${e::class.simpleName}, ${e.message}")
                 isInterrupted
                 break
             } catch (e: Exception) {
                 logInfo("Input loop error: $e")
+                isInterrupted
                 break
             }
 
@@ -175,17 +173,13 @@ class VideoDecoder private constructor() : Thread() {
                         MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                             // 收到真正的视频宽高发生改变的回调
                             val newFormat = codec.outputFormat
-                            logInfo("Decoder output format changed: $newFormat")
-                        }
-
-                        MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED -> {
-                            // 旧版本 API 兼容，可忽略
+                            logWarn("Decoder output format changed: $newFormat")
                         }
 
                         else -> {
                             if (outputIndex >= 0) {
                                 // 打印 BufferInfo 的元数据
-                                logInfo("★ 成功解出一帧! Size: ${info.size}, PTS: ${info.presentationTimeUs}, Flags: ${info.flags}", clazzName = "DecodeLoop")
+                                logDebug("★ output ==> size: ${info.size}, pts: ${info.presentationTimeUs}, flags: ${info.flags}", clazzName = "DecodeLoop")
                                 // true 表示直接让 MediaCodec 把这一帧的数据渲染到你绑定的 Surface/TextureView 上
                                 codec.releaseOutputBuffer(outputIndex, true)
 
@@ -198,14 +192,7 @@ class VideoDecoder private constructor() : Thread() {
                     }
                 }
             } catch (e: IllegalStateException) {
-                logInfo("Output dequeue IllegalStateException: ${e.message}")
-                val cause = e.cause
-                if (cause is MediaCodec.CodecException) {
-                    // 如果是底层硬解芯片报错，能在这里抓到诊断信息
-                    logInfo("★ 底层解码芯片致命错误! IsTransient: ${cause.isTransient}, IsRecoverable: ${cause.isRecoverable}, ErrorCode: ${cause.errorCode}", clazzName = "DecodeLoop")
-                } else {
-                    logInfo("★ 纯应用层状态错误 (可能未调用 start() 或在其他线程被 reset): ${e.message}", clazzName = "DecodeLoop")
-                }
+                logInfo("Output dequeue IllegalStateException: ${e::class.simpleName}, ${e.message}")
                 isInterrupted
                 break
             }
@@ -214,7 +201,7 @@ class VideoDecoder private constructor() : Thread() {
             if (inputQueue.isEmpty() && !transformDataSuccess) {
                 try {
                     sleep(10) // 10ms 既能保证不空转，又能换来约 100fps 的响应速度
-                } catch (e: InterruptedException) {
+                } catch (_: InterruptedException) {
                     break
                 }
             }

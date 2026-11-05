@@ -3,24 +3,22 @@ package com.devin.android.mycastdemo.sender
 import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
 import android.app.NotificationManager
-import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.os.Binder
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
-import android.os.IBinder
 import androidx.activity.result.ActivityResult
 import androidx.core.content.ContextCompat
 import com.devin.android.cast.core.CaptureConfig
 import com.devin.android.cast.core.NotificationHelper
-import com.devin.android.cast.core.logInfo
-import com.devin.android.mycastdemo.R
 import com.devin.android.cast.core.NotificationHelper.startForegroundWithNotification
 import com.devin.android.cast.core.NotificationHelper.stopForegroundNotification
+import com.devin.android.cast.core.logInfo
+import com.devin.android.cast.core.service.BaseService
+import com.devin.android.mycastdemo.R
 
-class ScreenCaptureService : Service() {
+class ScreenCaptureService : BaseService() {
 
     companion object {
         const val ACTION_START = "action_start"
@@ -56,12 +54,6 @@ class ScreenCaptureService : Service() {
         }
     }
 
-    inner class LocalBinder : Binder() {
-        fun getService(): ScreenCaptureService = this@ScreenCaptureService
-    }
-
-    private val binder = LocalBinder()
-
     var captureManager: CaptureManager? = null
         private set
 
@@ -89,7 +81,7 @@ class ScreenCaptureService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        logInfo("flags=$flags, startId=$startId")
+        super.onStartCommand(intent, flags, startId)
 
         when (intent?.action) {
             ACTION_START -> {
@@ -108,8 +100,6 @@ class ScreenCaptureService : Service() {
         stopForegroundNotification(NOTIFICATION_ID)
         super.onDestroy()
     }
-
-    override fun onBind(intent: Intent?): IBinder = binder
 
     private fun startCapture(
         resultCode: Int,

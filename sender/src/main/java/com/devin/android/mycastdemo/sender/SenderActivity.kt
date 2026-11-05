@@ -1,14 +1,11 @@
 package com.devin.android.mycastdemo.sender
 
 import android.annotation.SuppressLint
-import android.content.ComponentName
 import android.content.Intent
-import android.content.ServiceConnection
 import android.content.res.Configuration
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.os.Handler
-import android.os.IBinder
 import android.os.Looper
 import android.view.View
 import android.widget.TextView
@@ -17,12 +14,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.devin.android.cast.core.Utils
 import com.devin.android.cast.core.bindServiceCompat
-import com.devin.android.cast.core.logInfo
+import com.devin.android.cast.core.service.ServiceBinderConnection
 import com.devin.android.cast.core.startForegroundServiceCompat
 import com.devin.android.cast.core.stopServiceCompat
 import com.devin.android.mycastdemo.R
 import com.devin.android.mycastdemo.sender.CaptureManager.OnCodecOutputCallback
-import com.devin.android.mycastdemo.sender.websocket.WebSocketServer.SenderWebSocketServerCallback
+import com.devin.android.mycastdemo.sender.websocket.WebSocketServer.WebSocketServerCallback
 import com.devin.android.mycastdemo.sender.websocket.WebSocketService
 import org.java_websocket.WebSocket
 import timber.log.Timber
@@ -31,7 +28,7 @@ import java.util.Date
 import java.util.Locale
 
 @SuppressLint("SetTextI18n")
-class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runnable, OnCodecOutputCallback {
+class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, OnCodecOutputCallback {
 
     private var colorIndex = 0
     private val displayColors: IntArray by lazy { Utils.getColors(this, R.array.display_colors) }
@@ -47,7 +44,10 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         val text = if (ScreenCaptureService.startForegroundService(this, result)) {
-            bindService(Intent(this, ScreenCaptureService::class.java), screenCaptureConnection, BIND_AUTO_CREATE)
+            bindServiceCompat<ScreenCaptureService>(
+                this,
+                screenCaptureConnection
+            )
             "开始投屏"
         } else {
             "投屏失败，请授权..."
@@ -56,43 +56,29 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
     }
 
     private var screenCaptureService: ScreenCaptureService? = null
-    private var isBindCaptureService = false
     private var websocketService: WebSocketService? = null
-    private var isBindWebsocketService = false
 
-    private val screenCaptureConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            logInfo()
-            ((service as ScreenCaptureService.LocalBinder).getService()).also {
-                it.captureManager?.callback = this@SenderActivity
-                screenCaptureService = it
-            }
-            isBindCaptureService = true
+    private val screenCaptureConnection = object : ServiceBinderConnection<ScreenCaptureService>() {
+        override fun onServiceConnected(service: ScreenCaptureService) {
+            service.captureManager?.callback = this@SenderActivity
+            screenCaptureService = service
         }
 
-        override fun onServiceDisconnected(name: ComponentName) {
-            logInfo()
+        override fun onServiceDisconnected(service: ScreenCaptureService) {
             screenCaptureService?.captureManager?.callback = null
             screenCaptureService = null
-            isBindCaptureService = false
         }
     }
 
-    private val websocketConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            logInfo()
-            ((service as WebSocketService.LocalBinder).getService()).also {
-                it.webSocketServerCallback = this@SenderActivity
-                websocketService = it
-            }
-            isBindWebsocketService = true
+    private val websocketConnection = object : ServiceBinderConnection<WebSocketService>() {
+        override fun onServiceConnected(service: WebSocketService) {
+            service.webSocketServerCallback = this@SenderActivity
+            websocketService = service
         }
 
-        override fun onServiceDisconnected(name: ComponentName) {
-            logInfo()
+        override fun onServiceDisconnected(service: WebSocketService) {
             websocketService?.webSocketServerCallback = null
             websocketService = null
-            isBindWebsocketService = false
         }
     }
 
@@ -119,10 +105,7 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
             )
         }
         findViewById<View>(R.id.btnStop).setOnClickListener {
-            if (isBindCaptureService) {
-                unbindService(screenCaptureConnection)
-                isBindCaptureService = false
-            }
+            screenCaptureConnection.unbindService(this)
             stopService(Intent(this, ScreenCaptureService::class.java))
         }
         resetSizeInfo()
@@ -141,15 +124,12 @@ class SenderActivity : AppCompatActivity(), SenderWebSocketServerCallback, Runna
     override fun onDestroy() {
         handler.removeCallbacks(this)
         // capture service
-        if (isBindCaptureService) {
-            unbindService(screenCaptureConnection)
-            stopServiceCompat<ScreenCaptureService>(this)
-        }
+        screenCaptureConnection.unbindService(this)
+
         // websocket service
-        if (isBindWebsocketService) {
-            unbindService(websocketConnection)
-            stopServiceCompat<WebSocketService>(this)
-        }
+        websocketConnection.unbindService(this)
+        stopServiceCompat<WebSocketService>(this)
+
         super.onDestroy()
     }
 

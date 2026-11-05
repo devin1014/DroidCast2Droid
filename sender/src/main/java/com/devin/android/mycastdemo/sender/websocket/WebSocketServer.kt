@@ -1,7 +1,10 @@
 package com.devin.android.mycastdemo.sender.websocket
 
+import com.devin.android.cast.core.FrameProtocol
 import com.devin.android.cast.core.logDebug
+import com.devin.android.cast.core.logError
 import com.devin.android.cast.core.logInfo
+import com.devin.android.cast.core.logWarn
 import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
 import java.net.InetSocketAddress
@@ -9,10 +12,10 @@ import java.nio.ByteBuffer
 
 class WebSocketServer(
     port: Int,
-    private val callback: SenderWebSocketServerCallback,
+    private val callback: WebSocketServerCallback,
 ) : org.java_websocket.server.WebSocketServer(InetSocketAddress(port)) {
 
-    interface SenderWebSocketServerCallback {
+    interface WebSocketServerCallback {
         fun onClientConnected(conn: WebSocket) {}
         fun onClientDisconnected(conn: WebSocket) {}
         fun onError(t: Throwable) {}
@@ -39,7 +42,7 @@ class WebSocketServer(
     }
 
     override fun onClose(conn: WebSocket, code: Int, reason: String, remote: Boolean) {
-        logInfo("客户端断开: code=$code reason=$reason remote=$remote")
+        logWarn("客户端断开: code=$code reason=$reason remote=$remote")
         if (client == conn) {
             client = null
             callback.onClientDisconnected(conn)
@@ -49,15 +52,18 @@ class WebSocketServer(
     override fun onMessage(conn: WebSocket, message: String) {
         // 发送端目前只推流，不处理文本消息
         logInfo(message)
+        if (client == conn && message == FrameProtocol.COMMAND_GET_VIDEO_FORMAT) {
+            callback.onClientConnected(conn)
+        }
     }
 
     override fun onMessage(conn: WebSocket, message: ByteBuffer) {
         // 目前不需要接收端回传二进制数据
-        logInfo("message=${message}")
+        logDebug("message=${message}")
     }
 
     override fun onError(conn: WebSocket?, ex: Exception) {
-        logInfo("ex=$ex")
+        logError("ex=$ex")
         callback.onError(ex)
     }
 

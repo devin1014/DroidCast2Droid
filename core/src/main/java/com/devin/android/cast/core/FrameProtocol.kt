@@ -5,6 +5,8 @@ import java.nio.ByteBuffer
 object FrameProtocol {
     private const val MAGIC: Short = 0x5153
 
+    const val COMMAND_GET_VIDEO_FORMAT = "video:get-format"
+
     const val TYPE_FORMAT = 0x01.toByte()
     const val TYPE_VIDEO_CONFIG = 0x02.toByte()
     const val TYPE_VIDEO_FRAME = 0x04.toByte()

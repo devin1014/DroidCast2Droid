@@ -2,16 +2,13 @@ package com.devin.android.mycastdemo.sender.websocket
 
 import android.annotation.SuppressLint
 import android.app.NotificationManager
-import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.os.Binder
-import android.os.IBinder
+import com.devin.android.cast.core.NotificationHelper
+import com.devin.android.cast.core.NotificationHelper.startForegroundWithNotification
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.service.BaseService
 import com.devin.android.mycastdemo.R
-import com.devin.android.cast.core.NotificationHelper
-import com.devin.android.cast.core.NotificationHelper.startForegroundWithNotification
-import com.devin.android.mycastdemo.sender.websocket.WebSocketServer.SenderWebSocketServerCallback
+import com.devin.android.mycastdemo.sender.websocket.WebSocketServer.WebSocketServerCallback
 import org.java_websocket.WebSocket
 
 class WebSocketService : BaseService() {
@@ -21,13 +18,8 @@ class WebSocketService : BaseService() {
         private const val NOTIFICATION_ID = 2001
     }
 
-    inner class LocalBinder : Binder() {
-        fun getService(): WebSocketService = this@WebSocketService
-    }
-
-    private val binder = LocalBinder()
     private var wsServer: WebSocketServer? = null
-    var webSocketServerCallback: SenderWebSocketServerCallback? = null
+    var webSocketServerCallback: WebSocketServerCallback? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -53,19 +45,12 @@ class WebSocketService : BaseService() {
         startWebsocketServer()
     }
 
-    override fun onBind(intent: Intent?): IBinder = binder
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        super.onStartCommand(intent, flags, startId)
-        return START_NOT_STICKY
-    }
-
     private fun startWebsocketServer() {
         logInfo()
         if (wsServer == null) {
             WebSocketServer(
                 port = 8080,
-                callback = object : SenderWebSocketServerCallback {
+                callback = object : WebSocketServerCallback {
                     override fun onClientConnected(conn: WebSocket) {
                         webSocketServerCallback?.onClientConnected(conn)
                     }

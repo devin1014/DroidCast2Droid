@@ -9,6 +9,8 @@ import com.devin.android.cast.core.logWarn
 
 abstract class BaseService : Service() {
 
+    private val binder: Binder = LocalBinder()
+
     inner class LocalBinder : Binder() {
         fun getService(): BaseService = this@BaseService
     }
@@ -20,10 +22,10 @@ abstract class BaseService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         logInfo("flags=$flags, startId=$startId")
-        return super.onStartCommand(intent, flags, startId)
+        return START_NOT_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    override fun onBind(intent: Intent?): IBinder? = binder
 
     override fun onDestroy() {
         logWarn("")

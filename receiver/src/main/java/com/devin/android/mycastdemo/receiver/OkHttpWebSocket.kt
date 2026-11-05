@@ -33,6 +33,11 @@ class OkHttpWebSocket(
     private var webSocket: WebSocket? = null
     private val readBuffer = ArrayDeque<Byte>()
 
+    fun reconnect() {
+        val socket = webSocket ?: return
+        socket.send(FrameProtocol.COMMAND_GET_VIDEO_FORMAT)
+    }
+
     fun connect() {
         webSocket = client.newWebSocket(
             request = Request.Builder().url(url).build(),

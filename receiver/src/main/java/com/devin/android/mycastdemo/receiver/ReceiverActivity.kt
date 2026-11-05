@@ -30,7 +30,7 @@ class ReceiverActivity : AppCompatActivity() {
     private val placeHolder: View by lazy { findViewById(R.id.surfaceViewPlaceHolder) }
 
     private var surfaceHolder: SurfaceHolder? = null
-    private var receiver: OkHttpWebSocket? = null
+    private var okHttpWebSocket: OkHttpWebSocket? = null
     private var decoder: VideoDecoder? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -61,16 +61,20 @@ class ReceiverActivity : AppCompatActivity() {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 logInfo("holder=0x${holder.hashCode().toHexString()}", clazzName = "SurfaceCallback")
                 surfaceHolder = holder
+
             }
 
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
                 // 如需根据分辨率重新配置解码器，可在这里处理
-                logInfo("holder=0x${holder.hashCode().toHexString()}, format=$format, ${width}x${height}")
+                logInfo("holder=0x${holder.hashCode().toHexString()}, format=$format, ${width}x${height}", clazzName = "SurfaceCallback")
                 resetDisplaySizeInfo(width, height)
+                if (decoder == null) {
+                    okHttpWebSocket?.reconnect()
+                }
             }
 
             override fun surfaceDestroyed(holder: SurfaceHolder) {
-                logInfo("holder=0x${holder.hashCode().toHexString()}")
+                logWarn("holder=0x${holder.hashCode().toHexString()}", clazzName = "SurfaceCallback")
                 surfaceHolder = null
                 decoder?.release()
                 decoder = null
@@ -94,7 +98,7 @@ class ReceiverActivity : AppCompatActivity() {
     }
 
     private fun connect(url: String) {
-        if (receiver != null) {
+        if (okHttpWebSocket != null) {
             logWarn("已经连接")
             return
         }
@@ -128,7 +132,7 @@ class ReceiverActivity : AppCompatActivity() {
             })
             .also { streamReceiver ->
                 streamReceiver.connect()
-                receiver = streamReceiver
+                okHttpWebSocket = streamReceiver
             }
     }
 
@@ -157,8 +161,8 @@ class ReceiverActivity : AppCompatActivity() {
 
     private fun disconnect() {
         logInfo()
-        receiver?.disconnect()
-        receiver = null
+        okHttpWebSocket?.disconnect()
+        okHttpWebSocket = null
         decoder?.release()
         decoder = null
         updateStatus("已断开")
