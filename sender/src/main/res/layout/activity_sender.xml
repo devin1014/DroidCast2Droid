@@ -15,7 +15,8 @@
         android:layout_height="wrap_content"
         android:lines="1"
         android:maxLines="1"
-        android:text="ws://192.168.3.156:8080/stream" />
+        android:text=""
+        tools:text="ws://192.168.5.x:8080/stream" />
 
     <TextView
         android:layout_width="match_parent"

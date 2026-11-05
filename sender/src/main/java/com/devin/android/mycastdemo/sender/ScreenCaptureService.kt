@@ -10,7 +10,6 @@ import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import androidx.activity.result.ActivityResult
 import androidx.core.content.ContextCompat
-import com.devin.android.cast.core.CaptureConfig
 import com.devin.android.cast.core.NotificationHelper
 import com.devin.android.cast.core.NotificationHelper.startForegroundWithNotification
 import com.devin.android.cast.core.NotificationHelper.stopForegroundNotification

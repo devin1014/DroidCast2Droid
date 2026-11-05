@@ -9,22 +9,14 @@ import android.os.Build.VERSION_CODES
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowMetrics
+import java.net.Inet4Address
+import java.net.NetworkInterface
 
 object Utils {
     fun getScreenSize(context: Context): Pair<Int, Int> {
         val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
             ?: throw IllegalStateException("Default display not found")
-
-//        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-//            val metrics = display.getRealMetrics()
-//            metrics.width to metrics.height
-//        } else {
-//            val dm = DisplayMetrics()
-//            @Suppress("DEPRECATION")
-//            display.getRealMetrics(dm)
-//            dm.widthPixels to dm.heightPixels
-//        }
         val dm = DisplayMetrics()
         @Suppress("DEPRECATION")
         display.getRealMetrics(dm)
@@ -66,5 +58,38 @@ object Utils {
         } finally {
             typedArray?.recycle()
         }
+    }
+
+    fun getLocalIpAddress(): String? {
+        try {
+            var ipAddress: String? = ""
+            val interfaces = NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val networkInterface = interfaces.nextElement()
+
+                // 跳过未启用或回环接口
+                if (!networkInterface.isUp || networkInterface.isLoopback) continue
+
+                val addresses = networkInterface.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val address = addresses.nextElement()
+                    logInfo(
+                        "[${networkInterface.index}]${networkInterface.displayName ?: networkInterface.name} " +
+                                "${address.hostAddress}"
+                    )
+                    if (address is Inet4Address && !address.isLoopbackAddress) {
+                        // 过滤掉 169.254.x.x 链路本地地址
+                        if (!address.isLinkLocalAddress) {
+                            // 这里可以直接返回，不用遍历全部，这里是为了打印所有ip地址。
+                            ipAddress = address.hostAddress
+                        }
+                    }
+                }
+            }
+            return ipAddress
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
     }
 }

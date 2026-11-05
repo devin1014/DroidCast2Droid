@@ -19,7 +19,6 @@ import android.media.projection.MediaProjectionManager
 import android.os.Handler
 import android.os.Looper
 import androidx.core.graphics.createBitmap
-import com.devin.android.cast.core.CaptureConfig
 import com.devin.android.cast.core.FrameProtocol
 import com.devin.android.cast.core.logDebug
 import com.devin.android.cast.core.logError

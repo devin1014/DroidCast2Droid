@@ -109,6 +109,7 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
         }
         resetSizeInfo()
         handler.post(this)
+        Utils.getLocalIpAddress()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

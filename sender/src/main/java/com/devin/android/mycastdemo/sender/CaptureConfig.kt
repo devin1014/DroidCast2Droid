@@ -1,4 +1,4 @@
-package com.devin.android.cast.core
+package com.devin.android.mycastdemo.sender
 
 data class CaptureConfig(
     val width: Int,

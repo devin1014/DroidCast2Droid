@@ -31,7 +31,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:autofillHints=""
-            android:hint="WebSocket 地址，例如 ws://192.168.1.100:8080/stream"
+            android:hint="WebSocket 地址, ws://192..."
             android:inputType="textUri"
             android:maxLines="1" />
 

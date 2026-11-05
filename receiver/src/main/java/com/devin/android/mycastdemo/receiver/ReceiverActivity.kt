@@ -11,6 +11,7 @@ import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.devin.android.cast.core.Constants
 import com.devin.android.cast.core.Utils
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.logWarn
@@ -20,7 +21,8 @@ import com.devin.android.mycastdemo.receiver.FrameData.VideoFrameData
 class ReceiverActivity : AppCompatActivity() {
 
     companion object {
-        private const val DEFAULT_URL = "ws://192.168.5.126:8080/stream"
+        private const val URL_147 = "ws://${Constants.IP_ADDRESS_5_147}:8080/stream"
+        private const val URL_126 = "ws://${Constants.IP_ADDRESS_5_126}:8080/stream"
     }
 
     private val tvStatus: TextView by lazy { findViewById(R.id.tvStatus) }
@@ -38,8 +40,10 @@ class ReceiverActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_receiver)
 
+        val deviceIpAddress = Utils.getLocalIpAddress()
+        val is147 = deviceIpAddress == Constants.IP_ADDRESS_5_147
         val urlEditView = findViewById<EditText>(R.id.etUrl)
-        urlEditView.setText(DEFAULT_URL)
+        urlEditView.setText(if (is147) URL_126 else URL_147)
 
         findViewById<View>(R.id.btnConnect).setOnClickListener {
             connect(urlEditView.text.toString().trim())
