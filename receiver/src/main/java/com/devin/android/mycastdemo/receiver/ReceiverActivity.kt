@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.devin.android.cast.core.Utils
 import com.devin.android.cast.core.logInfo
+import com.devin.android.cast.core.logWarn
 import com.devin.android.mycastdemo.receiver.FrameData.VideoConfigData
 import com.devin.android.mycastdemo.receiver.FrameData.VideoFrameData
 import timber.log.Timber
@@ -26,9 +27,10 @@ class ReceiverActivity : AppCompatActivity() {
 
     private val tvStatus: TextView by lazy { findViewById(R.id.tvStatus) }
     private val tvDisplayInfo: TextView by lazy { findViewById(R.id.tvSizeInfo) }
+    private val placeHolder: View by lazy { findViewById(R.id.surfaceViewPlaceHolder) }
 
-    private var surfaceViewHolder: SurfaceHolder? = null
-    private var receiver: OkWebSocket? = null
+    private var surfaceHolder: SurfaceHolder? = null
+    private var receiver: OkHttpWebSocket? = null
     private var decoder: VideoDecoder? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -58,7 +60,7 @@ class ReceiverActivity : AppCompatActivity() {
         findViewById<SurfaceView>(R.id.surfaceView).holder.addCallback(object : Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 logInfo("holder=0x${holder.hashCode().toHexString()}", clazzName = "SurfaceCallback")
-                surfaceViewHolder = holder
+                surfaceHolder = holder
             }
 
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -69,7 +71,7 @@ class ReceiverActivity : AppCompatActivity() {
 
             override fun surfaceDestroyed(holder: SurfaceHolder) {
                 logInfo("holder=0x${holder.hashCode().toHexString()}")
-                surfaceViewHolder = null
+                surfaceHolder = null
                 decoder?.release()
                 decoder = null
             }
@@ -92,10 +94,14 @@ class ReceiverActivity : AppCompatActivity() {
     }
 
     private fun connect(url: String) {
+        if (receiver != null) {
+            logWarn("已经连接")
+            return
+        }
         updateStatus("连接中...")
         logInfo(url)
 
-        OkWebSocket(
+        OkHttpWebSocket(
             url,
             onConnected = {
                 updateStatus("已连接，等待推流配置")
@@ -109,13 +115,12 @@ class ReceiverActivity : AppCompatActivity() {
                         surfaceView.layoutParams = layoutParams
                     }
                 }
-                initDecoder(width, height, bitrate, csd0, csd1, surfaceViewHolder!!.surface)
+                initDecoder(width, height, bitrate, csd0, csd1, surfaceHolder!!.surface)
             },
             onVideoConfigReceived = { data, time ->
                 decoder?.feed(VideoConfigData(data, time))
             },
             onVideoFrameReceived = { data, time, isKeyFrame ->
-                logInfo("dataSize=${data.size}, time=$time, isKeyFrame=$isKeyFrame")
                 decoder?.feed(VideoFrameData(data, time, isKeyFrame))
             },
             onDisconnected = { reason ->
@@ -139,6 +144,15 @@ class ReceiverActivity : AppCompatActivity() {
         decoder = VideoDecoder.create(surface, width, height, bitrate, csd0, csd1)
         decoder?.start()
         updateStatus("解码器已启动 ${width}x${height}")
+
+        placeHolder.post {
+            placeHolder
+                .animate()
+                .alpha(0f)
+                .setDuration(1000L)
+                .withEndAction { placeHolder.visibility = View.GONE }
+                .start()
+        }
     }
 
     private fun disconnect() {
@@ -147,8 +161,8 @@ class ReceiverActivity : AppCompatActivity() {
         receiver = null
         decoder?.release()
         decoder = null
-        surfaceViewHolder?.surface?.release()
         updateStatus("已断开")
+        placeHolder.visibility = View.VISIBLE
     }
 
     private fun updateStatus(text: String) {

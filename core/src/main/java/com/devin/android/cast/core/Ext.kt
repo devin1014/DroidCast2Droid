@@ -37,6 +37,17 @@ inline fun logWarn(
     log(className, text, Level.WARNING)
 }
 
+inline fun logError(
+    message: String = "",
+    clazzName: String? = null,
+) {
+    val trace = Throwable().stackTrace[0]
+    val className = clazzName ?: parentClassName(trace.className.substringAfterLast("."))
+    val methodName = trace.methodName
+    val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: ""}"
+    log(className, text, Level.SEVERE)
+}
+
 fun log(
     tag: String,
     message: String,

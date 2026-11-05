@@ -16,11 +16,8 @@ import androidx.core.content.ContextCompat
 import com.devin.android.cast.core.CaptureConfig
 import com.devin.android.cast.core.logInfo
 import com.devin.android.mycastdemo.R
-import com.devin.android.mycastdemo.sender.CaptureManager.OnCodecOutputCallback
 import com.devin.android.mycastdemo.sender.NotificationHelper.startForegroundWithNotification
 import com.devin.android.mycastdemo.sender.NotificationHelper.stopForegroundNotification
-import com.devin.android.mycastdemo.sender.SenderWebSocketServer.SenderWebSocketServerCallback
-import org.java_websocket.WebSocket
 
 class ScreenCaptureService : Service() {
 
@@ -63,9 +60,9 @@ class ScreenCaptureService : Service() {
     }
 
     private val binder = LocalBinder()
-    private var wsServer: SenderWebSocketServer? = null
-    private var captureManager: CaptureManager? = null
-    var webSocketServerCallback: SenderWebSocketServerCallback? = null
+
+    var captureManager: CaptureManager? = null
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -107,7 +104,6 @@ class ScreenCaptureService : Service() {
     override fun onDestroy() {
         logInfo()
         stopCapture()
-        stopWebsocketServer()
         stopForegroundNotification(NOTIFICATION_ID)
         super.onDestroy()
     }
@@ -125,17 +121,13 @@ class ScreenCaptureService : Service() {
             stopSelf()
             return
         }
-        manager.callback = object : OnCodecOutputCallback {
-            override fun onOutputBufferFormatChanged(data: ByteArray) {
-                wsServer?.sendBytes(data)
-            }
-
-            override fun onOutputBufferAvailable(data: ByteArray) {
-                wsServer?.sendBytes(data)
-            }
-        }
         captureManager = manager
-        startWebsocketServer()
+
+        with(applicationContext.resources.displayMetrics) {
+            manager.start(
+                CaptureConfig(widthPixels, 720, heightPixels, densityDpi)
+            )
+        }
     }
 
     private fun stopCapture() {
@@ -143,41 +135,8 @@ class ScreenCaptureService : Service() {
         captureManager?.stop()
     }
 
-    private fun startWebsocketServer() {
-        logInfo()
-        wsServer?.stopServer()
-        SenderWebSocketServer(
-            8080,
-            WebSocketServerCallbackWrapper()
-        ).also { server ->
-            server.start()
-            wsServer = server
-        }
+    fun notifyNewClientConnected() {
+        captureManager?.notifyOutputFormat()
     }
 
-    private fun stopWebsocketServer() {
-        logInfo()
-        wsServer?.stopServer()
-    }
-
-    private inner class WebSocketServerCallbackWrapper : SenderWebSocketServerCallback {
-        override fun onClientConnected(conn: WebSocket) {
-            with(applicationContext.resources.displayMetrics) {
-                captureManager?.start(
-                    CaptureConfig(widthPixels, 720, heightPixels, densityDpi)
-                )
-            }
-            webSocketServerCallback?.onClientConnected(conn)
-        }
-
-        override fun onClientDisconnected(conn: WebSocket) {
-            stopCapture()
-            webSocketServerCallback?.onClientDisconnected(conn)
-        }
-
-        override fun onError(t: Throwable) {
-            stopCapture()
-            webSocketServerCallback?.onError(t)
-        }
-    }
 }

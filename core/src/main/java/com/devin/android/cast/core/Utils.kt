@@ -1,6 +1,8 @@
 package com.devin.android.cast.core
 
 import android.app.Activity
+import android.content.Context
+import android.content.res.TypedArray
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import android.util.DisplayMetrics
@@ -29,6 +31,18 @@ object Utils {
                     "    ${this.widthPixels}x${this.heightPixels}\n\n" +
                     "CurrentWindowMetrics size:\n" +
                     "    ${windowWidth}x${windowHeight}"
+        }
+    }
+
+    fun getColors(context: Context, array: Int): IntArray {
+        var typedArray: TypedArray? = null
+        return try {
+            typedArray = context.resources.obtainTypedArray(array)
+            IntArray(typedArray.length()) { i ->
+                typedArray.getColor(i, 0)
+            }
+        } finally {
+            typedArray?.recycle()
         }
     }
 }

@@ -1,5 +1,6 @@
-package com.devin.android.mycastdemo.sender
+package com.devin.android.mycastdemo.sender.websocket
 
+import com.devin.android.cast.core.logDebug
 import com.devin.android.cast.core.logInfo
 import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
@@ -7,7 +8,7 @@ import org.java_websocket.server.WebSocketServer
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 
-class SenderWebSocketServer(
+class MyWebSocketServer(
     port: Int,
     private val callback: SenderWebSocketServerCallback,
 ) : WebSocketServer(InetSocketAddress(port)) {
@@ -69,6 +70,7 @@ class SenderWebSocketServer(
         val conn = client ?: return
         if (!conn.isOpen) return
         try {
+            logDebug("...")
             conn.send(data)
         } catch (e: Exception) {
             logInfo("error=$e")

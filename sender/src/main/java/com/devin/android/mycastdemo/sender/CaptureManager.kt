@@ -46,13 +46,14 @@ class CaptureManager private constructor(
     }
 
     interface OnCodecOutputCallback {
-        fun onOutputBufferFormatChanged(data: ByteArray)
-        fun onOutputBufferAvailable(data: ByteArray)
+        fun onOutputBufferUpdate(data: ByteArray)
     }
 
     private var virtualDisplay: VirtualDisplay? = null
     private var encoder: MediaCodec? = null
     var callback: OnCodecOutputCallback? = null
+    private var curOutputFormatData: ByteArray? = null
+    private var lastOutputKeyFrameData: ByteArray? = null
 
     private val projectionCallback = object : MediaProjection.Callback() {
 
@@ -88,7 +89,7 @@ class CaptureManager private constructor(
                     val data = ByteArray(info.size)
                     configBuffer.get(data)
                     val videoBytes = FrameProtocol.packConfig(data, info.presentationTimeUs)
-                    callback?.onOutputBufferAvailable(videoBytes)
+                    callback?.onOutputBufferUpdate(videoBytes)
                 }
             } else if (info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME != 0) {
                 val configBuffer = codec.getOutputBuffer(index)
@@ -96,7 +97,9 @@ class CaptureManager private constructor(
                     val data = ByteArray(info.size)
                     configBuffer.get(data)
                     val videoBytes = FrameProtocol.packVideo(data, info.presentationTimeUs, true)
-                    callback?.onOutputBufferAvailable(videoBytes)
+                    callback?.onOutputBufferUpdate(videoBytes.also {
+                        lastOutputKeyFrameData = it
+                    })
                 }
             } else if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                 //TODO
@@ -111,7 +114,7 @@ class CaptureManager private constructor(
                     outputBuffer?.position(info.offset)
                     outputBuffer?.get(data)
                     val videoBytes = FrameProtocol.packVideo(data, info.presentationTimeUs, false)
-                    callback?.onOutputBufferAvailable(videoBytes)
+                    callback?.onOutputBufferUpdate(videoBytes)
                 }
             }
             codec.releaseOutputBuffer(index, false)
@@ -140,8 +143,10 @@ class CaptureManager private constructor(
                 ByteArray(it.remaining()).also { bytes -> it.get(bytes) }
             } ?: byteArrayOf()
 
-            callback?.onOutputBufferFormatChanged(
-                FrameProtocol.packFormat(width, height, bitrate, csd0Bytes, csd1Bytes)
+            callback?.onOutputBufferUpdate(
+                FrameProtocol.packFormat(width, height, bitrate, csd0Bytes, csd1Bytes).also {
+                    curOutputFormatData = it
+                }
             )
         }
     }
@@ -201,5 +206,14 @@ class CaptureManager private constructor(
 
         mediaProjection.unregisterCallback(projectionCallback)
         mediaProjection.stop()
+    }
+
+    fun notifyOutputFormat() {
+        curOutputFormatData?.also { bytes ->
+            callback?.onOutputBufferUpdate(bytes)
+        }
+        lastOutputKeyFrameData?.also { bytes ->
+            callback?.onOutputBufferUpdate(bytes)
+        }
     }
 }

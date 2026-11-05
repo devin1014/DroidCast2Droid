@@ -13,7 +13,7 @@ class MyApp : Application() {
             }
 
             override fun onActivityDestroyed(activity: Activity) {
-                logInfo("", clazzName = activity::class.simpleName)
+                logWarn("", clazzName = activity::class.simpleName)
             }
 
             override fun onActivityPaused(activity: Activity) {
@@ -33,7 +33,7 @@ class MyApp : Application() {
             }
 
             override fun onActivityStopped(activity: Activity) {
-                logInfo("", clazzName = activity::class.simpleName)
+                logWarn("", clazzName = activity::class.simpleName)
             }
         })
     }

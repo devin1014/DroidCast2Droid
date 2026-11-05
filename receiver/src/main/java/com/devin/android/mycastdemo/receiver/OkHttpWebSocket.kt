@@ -4,7 +4,10 @@ import com.devin.android.cast.core.FrameProtocol
 import com.devin.android.cast.core.FrameProtocol.TYPE_FORMAT
 import com.devin.android.cast.core.FrameProtocol.TYPE_VIDEO_CONFIG
 import com.devin.android.cast.core.FrameProtocol.TYPE_VIDEO_FRAME
+import com.devin.android.cast.core.logDebug
+import com.devin.android.cast.core.logError
 import com.devin.android.cast.core.logInfo
+import com.devin.android.cast.core.logWarn
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -15,7 +18,7 @@ import java.nio.ByteBuffer
 import java.util.concurrent.TimeUnit
 
 
-class OkWebSocket(
+class OkHttpWebSocket(
     private val url: String,
     private val onConnected: () -> Unit,
     private val onVideoFormatReceived: (width: Int, height: Int, bitrate: Int, csd0: ByteArray, csd1: ByteArray) -> Unit,
@@ -37,7 +40,7 @@ class OkWebSocket(
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     // 连接成功，等待发送端推流
                     logInfo(
-                        "code=${response.code} msg=${response.message} header=${response.headers}",
+                        "code=${response.code} msg=${response.message} \nheader=${response.headers}",
                         clazzName = "WebSocketListener"
                     )
                     onConnected()
@@ -48,12 +51,12 @@ class OkWebSocket(
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                    logInfo("$code=$code, reason=$reason", clazzName = "WebSocketListener")
+                    logWarn("$code=$code, reason=$reason", clazzName = "WebSocketListener")
                     onDisconnected(reason)
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    logInfo("error=$t", clazzName = "WebSocketListener")
+                    logError("error=$t", clazzName = "WebSocketListener")
                     onDisconnected(t.message ?: "unknown")
                 }
             })
@@ -65,7 +68,7 @@ class OkWebSocket(
 
         // 2. 检查基础报头长度 (1字节Type + 4字节PayloadLen = 5字节)
         if (byteBuffer.remaining() < 5) {
-            logInfo("数据包过短，无法解析包头", clazzName = "WebSocketListener")
+            logWarn("数据包过短，无法解析包头", clazzName = "WebSocketListener")
             return
         }
 
@@ -75,11 +78,9 @@ class OkWebSocket(
 
         // 4. 验证剩余字节是否和声明的载荷长度相符
         if (byteBuffer.remaining() < payloadLen) {
-            logInfo("数据不完整，期望载荷: " + payloadLen + ", 实际剩余: " + byteBuffer.remaining(), clazzName = "WebSocketListener")
+            logWarn("数据不完整，期望载荷: " + payloadLen + ", 实际剩余: " + byteBuffer.remaining(), clazzName = "WebSocketListener")
             return
         }
-
-        logInfo("type=$type, ByteString size=${bytes.size}", clazzName = "WebSocketListener")
 
         // 5. 根据类型进行分流解析
         when (type) {
@@ -95,8 +96,7 @@ class OkWebSocket(
                 parseVideoFramePacket(false, byteBuffer)
             }
 
-            else -> {
-            }
+            else -> {}
         }
     }
 
@@ -119,7 +119,7 @@ class OkWebSocket(
         if (csd1Len > 0) {
             buffer.get(csd1)
         }
-
+        logInfo("width=$width, height=$height, bitrate=$bitrate, csd0=[$csd0Len], csd1=[$csd1Len]", clazzName = "WebSocketListener")
         onVideoFormatReceived(width, height, bitrate, csd0, csd1)
     }
 
@@ -135,8 +135,14 @@ class OkWebSocket(
         val frameData = ByteArray(frameSize)
         buffer.get(frameData)
         if (isConfig) {
+            logInfo("video config")
             onVideoConfigReceived(frameData, presentationTimeUs)
         } else {
+            if (isKeyFrame) {
+                logInfo("video key frame: $frameSize")
+            } else {
+                logDebug("video frame: $frameSize")
+            }
             onVideoFrameReceived(frameData, presentationTimeUs, isKeyFrame)
         }
     }
