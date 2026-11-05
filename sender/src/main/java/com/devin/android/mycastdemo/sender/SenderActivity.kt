@@ -94,7 +94,6 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sender)
-        Timber.plant(Timber.DebugTree())
 
         startForegroundServiceCompat<WebSocketService>(this)
         bindServiceCompat<WebSocketService>(this, websocketConnection)

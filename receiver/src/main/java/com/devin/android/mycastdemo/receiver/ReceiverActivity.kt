@@ -16,7 +16,6 @@ import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.logWarn
 import com.devin.android.mycastdemo.receiver.FrameData.VideoConfigData
 import com.devin.android.mycastdemo.receiver.FrameData.VideoFrameData
-import timber.log.Timber
 
 class ReceiverActivity : AppCompatActivity() {
 
@@ -38,8 +37,6 @@ class ReceiverActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_receiver)
-
-        Timber.plant(Timber.DebugTree())
 
         val urlEditView = findViewById<EditText>(R.id.etUrl)
         urlEditView.setText(DEFAULT_URL)
@@ -137,6 +134,13 @@ class ReceiverActivity : AppCompatActivity() {
             layoutParams.height = targetHeight
             surfaceView.layoutParams = layoutParams
         }
+
+        placeHolder.post {
+            val layoutParams = placeHolder.layoutParams
+            layoutParams.width = targetWidth
+            layoutParams.height = targetHeight
+            placeHolder.layoutParams = layoutParams
+        }
     }
 
     private fun connect(url: String) {
@@ -189,14 +193,7 @@ class ReceiverActivity : AppCompatActivity() {
         decoder?.start()
         updateStatus("解码器已启动 ${width}x${height}")
 
-        placeHolder.post {
-            placeHolder
-                .animate()
-                .alpha(0f)
-                .setDuration(1000L)
-                .withEndAction { placeHolder.visibility = View.GONE }
-                .start()
-        }
+        placeHolder.fadeOut()
     }
 
     private fun disconnect() {
@@ -206,7 +203,8 @@ class ReceiverActivity : AppCompatActivity() {
         decoder?.release()
         decoder = null
         updateStatus("已断开")
-        placeHolder.visibility = View.VISIBLE
+
+        placeHolder.fadeIn()
     }
 
     private fun updateStatus(text: String) {
@@ -216,5 +214,30 @@ class ReceiverActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         disconnect()
+    }
+
+    private fun View.fadeOut(duration: Long = 500L) {
+        post {
+            animate()
+                .alpha(0f)
+                .setDuration(duration)
+                .withEndAction {
+                    visibility = View.GONE
+                }
+                .start()
+        }
+    }
+
+    private fun View.fadeIn(duration: Long = 500L) {
+        post {
+            alpha = 0f
+            animate()
+                .alpha(1f)
+                .setDuration(duration)
+                .withEndAction {
+                    visibility = View.VISIBLE
+                }
+                .start()
+        }
     }
 }
