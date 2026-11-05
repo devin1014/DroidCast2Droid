@@ -1,9 +1,13 @@
 package com.devin.android.mycastdemo.sender
 
+import android.content.Context
 import android.content.Context.MEDIA_PROJECTION_SERVICE
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
+import android.media.ImageReader
 import android.media.MediaCodec
 import android.media.MediaCodec.BufferInfo
 import android.media.MediaCodec.Callback
@@ -14,11 +18,15 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Handler
 import android.os.Looper
+import androidx.core.graphics.createBitmap
 import com.devin.android.cast.core.CaptureConfig
 import com.devin.android.cast.core.FrameProtocol
 import com.devin.android.cast.core.logDebug
+import com.devin.android.cast.core.logError
 import com.devin.android.cast.core.logInfo
 import timber.log.Timber
+import java.io.File
+import java.io.FileOutputStream
 
 class CaptureManager private constructor(
     private val mediaProjection: MediaProjection,
@@ -155,14 +163,20 @@ class CaptureManager private constructor(
         mediaProjection.registerCallback(projectionCallback, Handler(Looper.getMainLooper()))
     }
 
-    fun start(config: CaptureConfig) {
-        val width = config.width
-        val height = config.height
+    fun start(
+        context: Context,
+        config: CaptureConfig,
+    ) {
+        val screenWidth = config.width
+        val screenHeight = config.height
         val dpi = config.dpi
         val targetWidth = config.targetWidth
-        val targetHeight = ((height * targetWidth) / width) / 16 * 16
+        val targetHeight = ((screenHeight * targetWidth) / screenWidth) / 16 * 16
 
-        logInfo("视频比例缩放: $width*$height => $targetWidth*$targetHeight")
+        logInfo(
+            "$config" +
+                    "\n    视频比例缩放: $screenWidth*$screenHeight => $targetWidth*$targetHeight"
+        )
 
         with(MediaCodec.createEncoderByType(MIME_TYPE_VIDEO)) {
             setCallback(codecCallback)
@@ -179,7 +193,18 @@ class CaptureManager private constructor(
                 MediaCodec.CONFIGURE_FLAG_ENCODE
             )
 
-            val inputSurface = this.createInputSurface()
+            val inputSurface = if (config.useImageReader) {
+                val imageReader = ImageReader.newInstance(
+                    screenWidth,
+                    screenHeight,
+                    PixelFormat.RGBA_8888,
+                    2
+                )
+                setupImageReader(imageReader, context)
+                imageReader.surface
+            } else {
+                this.createInputSurface()
+            }
             start()
             encoder = this
 
@@ -188,7 +213,7 @@ class CaptureManager private constructor(
                 targetWidth,
                 targetHeight,
                 dpi,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                 inputSurface,
                 null,
                 null
@@ -215,5 +240,51 @@ class CaptureManager private constructor(
         lastOutputKeyFrameData?.also { bytes ->
             callback?.onOutputBufferUpdate(bytes)
         }
+    }
+
+    private fun setupImageReader(reader: ImageReader, context: Context) {
+        reader.setOnImageAvailableListener({ r ->
+            val image = r.acquireLatestImage() ?: return@setOnImageAvailableListener
+            try {
+                val width = image.width
+                val height = image.height
+                val planes = image.planes
+                if (planes.isEmpty()) {
+                    logError("planes is empty")
+                    return@setOnImageAvailableListener
+                }
+                val buffer = planes[0].buffer
+                val pixelStride = planes[0].pixelStride
+                val rowStride = planes[0].rowStride
+                logInfo("image size=${width}x${height}, pixelStride=$pixelStride, rowStride=$rowStride")
+                val bitmap = if (pixelStride == 4 && rowStride == width * 4) {
+                    buffer.rewind()
+                    createBitmap(width, height).apply {
+                        copyPixelsFromBuffer(buffer)
+                    }
+                } else {
+                    val paddedWidth = rowStride / 4
+                    val paddedBitmap = createBitmap(paddedWidth, height)
+                    buffer.rewind()
+                    paddedBitmap.copyPixelsFromBuffer(buffer)
+
+                    Bitmap.createBitmap(paddedBitmap, 0, 0, width, height).also {
+                        paddedBitmap.recycle()
+                    }
+                }
+                val dir = context.getExternalFilesDir(null)
+                    ?: throw IllegalStateException("external files dir is null")
+                val file = File(dir, "capture_frame.png")
+                FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                logInfo("saved to ${file.absolutePath}")
+                bitmap.recycle()
+            } catch (e: Exception) {
+                logError("save frame failed: $e")
+            } finally {
+                image.close()
+            }
+        }, Handler(Looper.getMainLooper()))
     }
 }

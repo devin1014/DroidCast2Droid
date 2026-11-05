@@ -8,4 +8,5 @@ data class CaptureConfig(
     val bitrate: Int = 2_000_000,
     val frameRate: Int = 30,
     val keyFrameInterval: Int = 2,
+    val useImageReader: Boolean = false,
 )

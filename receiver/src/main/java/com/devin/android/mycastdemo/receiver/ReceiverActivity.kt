@@ -10,7 +10,6 @@ import android.view.SurfaceView
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.devin.android.cast.core.Utils
 import com.devin.android.cast.core.logInfo
@@ -28,6 +27,7 @@ class ReceiverActivity : AppCompatActivity() {
     private val tvStatus: TextView by lazy { findViewById(R.id.tvStatus) }
     private val tvDisplayInfo: TextView by lazy { findViewById(R.id.tvSizeInfo) }
     private val placeHolder: View by lazy { findViewById(R.id.surfaceViewPlaceHolder) }
+    private val surfaceView: SurfaceView by lazy { findViewById(R.id.surfaceView) }
 
     private var surfaceHolder: SurfaceHolder? = null
     private var okHttpWebSocket: OkHttpWebSocket? = null
@@ -45,19 +45,14 @@ class ReceiverActivity : AppCompatActivity() {
         urlEditView.setText(DEFAULT_URL)
 
         findViewById<View>(R.id.btnConnect).setOnClickListener {
-            val url = urlEditView.text.toString().trim()
-            if (url.isEmpty()) {
-                Toast.makeText(this, "请输入 WebSocket 地址", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            connect(url)
+            connect(urlEditView.text.toString().trim())
         }
 
         findViewById<View>(R.id.btnDisconnect).setOnClickListener {
             disconnect()
         }
 
-        findViewById<SurfaceView>(R.id.surfaceView).holder.addCallback(object : Callback {
+        surfaceView.holder.addCallback(object : Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 logInfo("holder=0x${holder.hashCode().toHexString()}", clazzName = "SurfaceCallback")
                 surfaceHolder = holder
@@ -67,7 +62,7 @@ class ReceiverActivity : AppCompatActivity() {
             override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
                 // 如需根据分辨率重新配置解码器，可在这里处理
                 logInfo("holder=0x${holder.hashCode().toHexString()}, format=$format, ${width}x${height}", clazzName = "SurfaceCallback")
-                resetDisplaySizeInfo(width, height)
+                resetDisplaySizeInfo()
                 if (decoder == null) {
                     okHttpWebSocket?.reconnect()
                 }
@@ -84,17 +79,64 @@ class ReceiverActivity : AppCompatActivity() {
         resetDisplaySizeInfo()
     }
 
-    private fun resetDisplaySizeInfo(
-        surfaceWidth: Int = 0,
-        surfaceHeight: Int = 0,
-    ) {
+    private var formatWidth: Int = 0
+    private var formatHeight: Int = 0
+
+    private fun resetDisplaySizeInfo() {
+        // screen info
         var displaySizeText = Utils.getDisplaySizeInfo(this)
+
+        // surface info
+        val surfaceWidth = surfaceView.width
+        val surfaceHeight = surfaceView.height
         if (surfaceWidth > 0 && surfaceHeight > 0) {
             displaySizeText = "$displaySizeText\n\n" +
                     "Surface size:\n" +
                     "    ${surfaceWidth}x${surfaceHeight}"
         }
-        tvDisplayInfo.text = displaySizeText
+
+        // format info
+        if (formatWidth > 0 && formatHeight > 0) {
+            displaySizeText = "$displaySizeText\n\n" +
+                    "format size:\n" +
+                    "    ${formatWidth}x${formatHeight}"
+        }
+
+        tvDisplayInfo.post {
+            tvDisplayInfo.text = displaySizeText
+        }
+    }
+
+    private fun resetSurfaceViewSize(width: Int, height: Int) {
+        val viewWidth = surfaceView.width
+        val viewHeight = surfaceView.height
+
+        if (viewWidth <= 0 || viewHeight <= 0 || width <= 0 || height <= 0) return
+
+        // 原始视频比例
+        val videoRatio = width.toFloat() / height.toFloat()
+        // 容器比例
+        val viewRatio = viewWidth.toFloat() / viewHeight.toFloat()
+
+        val targetWidth: Int
+        val targetHeight: Int
+
+        if (videoRatio > viewRatio) {
+            // 视频更宽，以宽度为准，高度缩放
+            targetWidth = viewWidth
+            targetHeight = (viewWidth / videoRatio).toInt()
+        } else {
+            // 视频更高，以高度为准，宽度缩放
+            targetHeight = viewHeight
+            targetWidth = (viewHeight * videoRatio).toInt()
+        }
+
+        surfaceView.post {
+            val layoutParams = surfaceView.layoutParams
+            layoutParams.width = targetWidth
+            layoutParams.height = targetHeight
+            surfaceView.layoutParams = layoutParams
+        }
     }
 
     private fun connect(url: String) {
@@ -111,14 +153,12 @@ class ReceiverActivity : AppCompatActivity() {
                 updateStatus("已连接，等待推流配置")
             },
             onVideoFormatReceived = { width, height, bitrate, csd0, csd1 ->
-                mainHandler.post {
-                    findViewById<SurfaceView>(R.id.surfaceView).also { surfaceView ->
-                        val layoutParams = surfaceView.layoutParams
-                        layoutParams.width = width
-                        layoutParams.height = height
-                        surfaceView.layoutParams = layoutParams
-                    }
-                }
+                formatWidth = width
+                formatHeight = height
+                resetDisplaySizeInfo()
+                // surface
+                resetSurfaceViewSize(width, height)
+                // decoder
                 initDecoder(width, height, bitrate, csd0, csd1, surfaceHolder!!.surface)
             },
             onVideoConfigReceived = { data, time ->

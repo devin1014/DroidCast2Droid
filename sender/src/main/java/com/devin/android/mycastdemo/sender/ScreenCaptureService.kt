@@ -14,6 +14,7 @@ import com.devin.android.cast.core.CaptureConfig
 import com.devin.android.cast.core.NotificationHelper
 import com.devin.android.cast.core.NotificationHelper.startForegroundWithNotification
 import com.devin.android.cast.core.NotificationHelper.stopForegroundNotification
+import com.devin.android.cast.core.Utils
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.service.BaseService
 import com.devin.android.mycastdemo.R
@@ -114,11 +115,12 @@ class ScreenCaptureService : BaseService() {
         }
         captureManager = manager
 
-        with(applicationContext.resources.displayMetrics) {
-            manager.start(
-                CaptureConfig(widthPixels, 720, heightPixels, densityDpi)
-            )
-        }
+        val densityDpi = resources.displayMetrics.densityDpi
+        val (width, height) = Utils.getScreenSize(applicationContext)
+        manager.start(
+            applicationContext,
+            CaptureConfig(width, 720, height, densityDpi)
+        )
     }
 
     private fun stopCapture() {

@@ -3,12 +3,34 @@ package com.devin.android.cast.core
 import android.app.Activity
 import android.content.Context
 import android.content.res.TypedArray
+import android.hardware.display.DisplayManager
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import android.util.DisplayMetrics
+import android.view.Display
 import android.view.WindowMetrics
 
 object Utils {
+    fun getScreenSize(context: Context): Pair<Int, Int> {
+        val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+            ?: throw IllegalStateException("Default display not found")
+
+//        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+//            val metrics = display.getRealMetrics()
+//            metrics.width to metrics.height
+//        } else {
+//            val dm = DisplayMetrics()
+//            @Suppress("DEPRECATION")
+//            display.getRealMetrics(dm)
+//            dm.widthPixels to dm.heightPixels
+//        }
+        val dm = DisplayMetrics()
+        @Suppress("DEPRECATION")
+        display.getRealMetrics(dm)
+        return dm.widthPixels to dm.heightPixels
+    }
+
     fun getActivitySize(activity: Activity): Pair<Int, Int> {
         return if (VERSION.SDK_INT >= VERSION_CODES.R) {
             // Android 11 (API 30) 及以上推荐方法
