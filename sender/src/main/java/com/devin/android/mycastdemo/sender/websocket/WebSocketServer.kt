@@ -75,7 +75,6 @@ class WebSocketServer(
         val conn = client ?: return
         if (!conn.isOpen) return
         try {
-            logDebug("...")
             conn.send(data)
         } catch (e: Exception) {
             logInfo("error=$e")

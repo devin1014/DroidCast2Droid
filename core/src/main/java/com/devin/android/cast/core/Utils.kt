@@ -9,6 +9,7 @@ import android.os.Build.VERSION_CODES
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowMetrics
+import androidx.core.content.edit
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
@@ -41,10 +42,9 @@ object Utils {
     fun getDisplaySizeInfo(activity: Activity): String {
         val (windowWidth, windowHeight) = getActivitySize(activity)
         return with(activity.resources.displayMetrics) {
-            "DisplayMetrics size:\n" +
-                    "    ${this.widthPixels}x${this.heightPixels}\n\n" +
-                    "CurrentWindowMetrics size:\n" +
-                    "    ${windowWidth}x${windowHeight}"
+            "DisplayMetrics: ${this.widthPixels}x${this.heightPixels}" +
+                    "\n" +
+                    "WindowMetrics: ${windowWidth}x${windowHeight}"
         }
     }
 
@@ -91,5 +91,17 @@ object Utils {
             e.printStackTrace()
         }
         return null
+    }
+
+    fun putUrl2SharePreference(context: Context, url: String) {
+        context.getSharedPreferences("serverUrl", Context.MODE_PRIVATE)
+            .edit(commit = true) {
+                putString("url", url)
+            }
+    }
+
+    fun getSharePreferenceUrl(context: Context): String {
+        return context.getSharedPreferences("serverUrl", Context.MODE_PRIVATE)
+            .getString("url", Constants.DEFAULT_SERVER) ?: Constants.DEFAULT_SERVER
     }
 }

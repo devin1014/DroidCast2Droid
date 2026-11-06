@@ -18,11 +18,13 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Handler
 import android.os.Looper
+import android.view.Surface
 import androidx.core.graphics.createBitmap
 import com.devin.android.cast.core.FrameProtocol
 import com.devin.android.cast.core.logDebug
 import com.devin.android.cast.core.logError
 import com.devin.android.cast.core.logInfo
+import com.devin.android.cast.core.logWarn
 import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
@@ -61,6 +63,7 @@ class CaptureManager private constructor(
     var callback: OnCodecOutputCallback? = null
     private var curOutputFormatData: ByteArray? = null
     private var lastOutputKeyFrameData: ByteArray? = null
+    private var screenConfig: CaptureConfig? = null
 
     private val projectionCallback = object : MediaProjection.Callback() {
 
@@ -86,8 +89,6 @@ class CaptureManager private constructor(
             logInfo("index=$index", clazzName = "MediaCodec-Callback")
         }
 
-        private var lastBufferStampMs: Long = 0L
-
         override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: BufferInfo) {
             logDebug("info flag=${info.flags}, size=${info.size}, offset=${info.offset}, timeUs=${info.presentationTimeUs}", clazzName = "MediaCodec-Callback")
             if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
@@ -111,10 +112,6 @@ class CaptureManager private constructor(
             } else if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                 //TODO
             } else {
-                if (info.presentationTimeUs - lastBufferStampMs > 500) {
-                    lastBufferStampMs = info.presentationTimeUs
-                }
-
                 if (info.size > 0) {
                     val outputBuffer = codec.getOutputBuffer(index)
                     val data = ByteArray(info.size)
@@ -166,15 +163,15 @@ class CaptureManager private constructor(
         context: Context,
         config: CaptureConfig,
     ) {
+        screenConfig = config
         val screenWidth = config.width
         val screenHeight = config.height
         val dpi = config.dpi
-        val targetWidth = config.targetWidth
-        val targetHeight = ((screenHeight * targetWidth) / screenWidth) / 16 * 16
+        val (targetWidth, targetHeight) = scaleSize(screenWidth, screenHeight, config.targetResolution)
 
         logInfo(
             "$config" +
-                    "\n    视频比例缩放: $screenWidth*$screenHeight => $targetWidth*$targetHeight"
+                    "\n    scale: $screenWidth*$screenHeight => $targetWidth*$targetHeight"
         )
 
         with(MediaCodec.createEncoderByType(MIME_TYPE_VIDEO)) {
@@ -193,6 +190,7 @@ class CaptureManager private constructor(
             )
 
             val inputSurface = if (config.useImageReader) {
+                // save image in device fot test.
                 val imageReader = ImageReader.newInstance(
                     screenWidth,
                     screenHeight,
@@ -207,17 +205,40 @@ class CaptureManager private constructor(
             start()
             encoder = this
 
-            virtualDisplay = mediaProjection.createVirtualDisplay(
-                VIRTUAL_DISPLAY_NAME,
-                targetWidth,
-                targetHeight,
-                dpi,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                inputSurface,
-                null,
-                null
-            )
+            virtualDisplay?.release()
+            virtualDisplay = createVirtualDisplay(targetWidth, targetHeight, dpi, inputSurface)
         }
+    }
+
+    private fun createVirtualDisplay(
+        width: Int,
+        height: Int,
+        dpi: Int,
+        surface: Surface,
+    ): VirtualDisplay? {
+        return mediaProjection.createVirtualDisplay(
+            VIRTUAL_DISPLAY_NAME,
+            width,
+            height,
+            dpi,
+            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or
+                    DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+            surface,
+            object : VirtualDisplay.Callback() {
+                override fun onResumed() {
+                    logInfo("", clazzName = "VirtualDisplay.Callback")
+                }
+
+                override fun onPaused() {
+                    logInfo("", clazzName = "VirtualDisplay.Callback")
+                }
+
+                override fun onStopped() {
+                    logWarn("", clazzName = "VirtualDisplay.Callback")
+                }
+            },
+            null
+        )
     }
 
     fun stop() {
@@ -230,6 +251,34 @@ class CaptureManager private constructor(
 
         mediaProjection.unregisterCallback(projectionCallback)
         mediaProjection.stop()
+    }
+
+    private fun scaleSize(screenWidth: Int, screenHeight: Int, targetRatio: Int): Pair<Int, Int> {
+        return if (screenWidth < screenHeight) { // vertical
+            val targetHeight = ((screenHeight * targetRatio) / screenWidth) / 16 * 16
+            targetRatio to targetHeight
+        } else {
+            val targetWidth = ((screenWidth * targetRatio) / screenHeight) / 16 * 16
+            targetWidth to targetRatio
+        }
+    }
+
+    fun updateScreenSize(width: Int, height: Int) {
+        // todo
+//        screenConfig?.copy(width = width, height = height)?.also { config ->
+//            screenConfig = config
+//            val screenWidth = config.width
+//            val screenHeight = config.height
+//            val dpi = config.dpi
+//            val (targetWidth, targetHeight) = scaleSize(screenWidth, screenHeight, config.targetResolution)
+//            logInfo("virtualDisplay resize=${targetWidth}x${targetHeight}")
+////            virtualDisplay?.resize(targetWidth, targetHeight, dpi)
+//            virtualDisplay?.let { display ->
+//                val surface = display.surface
+//                display.release()
+//                virtualDisplay = createVirtualDisplay(targetWidth, targetHeight, dpi, surface)
+//            }
+//        }
     }
 
     fun notifyOutputFormat() {

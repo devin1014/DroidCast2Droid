@@ -1,102 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="false"
-    android:keepScreenOn="true"
-    android:orientation="vertical"
-    android:padding="16dp"
+    android:background="@drawable/bg_border"
+    android:fillViewport="true"
     tools:ignore="HardcodedText">
 
-    <TextView
-        android:id="@+id/tvAddress"
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:lines="1"
-        android:maxLines="1"
-        android:text=""
-        tools:text="ws://192.168.5.x:8080/stream" />
+        android:keepScreenOn="true"
+        android:padding="6dp"
+        tools:ignore="HardcodedText">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="连接服务器后，点击开始投屏获取屏幕录制权限"
-        android:textSize="12sp" />
+        <TextView
+            android:id="@+id/tvAddressLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:lines="1"
+            android:maxLines="1"
+            android:text="LocalServer"
+            android:textAllCaps="false"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:orientation="horizontal">
+        <TextView
+            android:id="@+id/tvAddress"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:lines="1"
+            android:maxLines="1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/tvAddressLabel"
+            app:layout_constraintTop_toTopOf="@id/tvAddressLabel"
+            tools:text="ws://192.168.5.x:8080/stream" />
 
         <Button
             android:id="@+id/btnStart"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="开始投屏" />
+            android:layout_marginTop="6dp"
+            android:text="开始录屏"
+            app:layout_constraintStart_toStartOf="@id/tvAddressLabel"
+            app:layout_constraintTop_toBottomOf="@id/tvAddressLabel" />
 
         <Button
             android:id="@+id/btnStop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="停止录屏"
+            app:layout_constraintStart_toEndOf="@id/btnStart"
+            app:layout_constraintTop_toTopOf="@id/btnStart" />
+
+        <TextView
+            android:id="@+id/tvStatus"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="停止投屏" />
-    </LinearLayout>
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_box_border"
+            android:gravity="center_vertical"
+            android:lines="2"
+            android:maxLines="2"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="--"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@id/tvAddressLabel"
+            app:layout_constraintTop_toBottomOf="@id/btnStart" />
 
-    <!--<LinearLayout-->
-    <!--    android:layout_width="match_parent"-->
-    <!--    android:layout_height="wrap_content"-->
-    <!--    android:layout_marginTop="8dp"-->
-    <!--    android:orientation="horizontal">-->
+        <TextView
+            android:id="@+id/tvScreenInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_box_border"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="screen info"
+            android:textColor="#000000"
+            android:textStyle="normal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@id/tvAddressLabel"
+            app:layout_constraintTop_toBottomOf="@id/tvStatus"
+            app:layout_goneMarginTop="6dp"
+            tools:ignore="SpUsage" />
 
-    <!--    <androidx.appcompat.widget.SwitchCompat-->
-    <!--        android:id="@+id/switchServer"-->
-    <!--        android:layout_width="wrap_content"-->
-    <!--        android:layout_height="30dp"-->
-    <!--        android:drawablePadding="8dp"-->
-    <!--        android:paddingStart="8dp"-->
-    <!--        android:paddingEnd="8dp"-->
-    <!--        android:text="Websocket"-->
-    <!--        android:textAllCaps="false"-->
-    <!--        app:thumbTextPadding="8dp" />-->
-    <!--</LinearLayout>-->
+        <TextView
+            android:id="@+id/tvTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_box_border"
+            android:lines="1"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="00:00:00"
+            android:textColor="#000000"
+            android:textSize="20dp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@id/tvAddressLabel"
+            app:layout_constraintTop_toBottomOf="@id/tvScreenInfo"
+            tools:ignore="SpUsage" />
 
-    <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="未连接" />
+        <View
+            android:id="@+id/displayColor"
+            android:layout_width="300dp"
+            android:layout_height="300dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/circle_shape"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvTime" />
 
-    <TextView
-        android:id="@+id/tvScreenInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="screen info"
-        android:textColor="#000000"
-        android:textSize="18dp"
-        android:textStyle="normal"
-        tools:ignore="SpUsage" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <TextView
-        android:id="@+id/tvTime"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="00:00:00"
-        android:textColor="#000000"
-        android:textSize="20dp"
-        android:textStyle="bold"
-        tools:ignore="SpUsage" />
-
-    <View
-        android:id="@+id/displayColor"
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:layout_marginTop="10dp" />
-
-</LinearLayout>
+</ScrollView>

@@ -12,6 +12,7 @@ import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.devin.android.cast.core.Constants
+import com.devin.android.cast.core.Constants.URL_HOLDER
 import com.devin.android.cast.core.Utils
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.logWarn
@@ -19,11 +20,6 @@ import com.devin.android.mycastdemo.receiver.FrameData.VideoConfigData
 import com.devin.android.mycastdemo.receiver.FrameData.VideoFrameData
 
 class ReceiverActivity : AppCompatActivity() {
-
-    companion object {
-        private const val URL_147 = "ws://${Constants.IP_ADDRESS_5_147}:8080/stream"
-        private const val URL_126 = "ws://${Constants.IP_ADDRESS_5_126}:8080/stream"
-    }
 
     private val tvStatus: TextView by lazy { findViewById(R.id.tvStatus) }
     private val tvDisplayInfo: TextView by lazy { findViewById(R.id.tvSizeInfo) }
@@ -40,10 +36,16 @@ class ReceiverActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_receiver)
 
-        val deviceIpAddress = Utils.getLocalIpAddress()
-        val is147 = deviceIpAddress == Constants.IP_ADDRESS_5_147
         val urlEditView = findViewById<EditText>(R.id.etUrl)
-        urlEditView.setText(if (is147) URL_126 else URL_147)
+        urlEditView.setText(Utils.getSharePreferenceUrl(this))
+
+        findViewById<View>(R.id.btnUrl).setOnClickListener {
+            UrlPickerDialog(this, Constants.serverUrls) { url ->
+                val serverUrl = URL_HOLDER.replace("@ip", url)
+                Utils.putUrl2SharePreference(this, serverUrl)
+                urlEditView.setText(serverUrl)
+            }.show()
+        }
 
         findViewById<View>(R.id.btnConnect).setOnClickListener {
             connect(urlEditView.text.toString().trim())
@@ -91,16 +93,14 @@ class ReceiverActivity : AppCompatActivity() {
         val surfaceWidth = surfaceView.width
         val surfaceHeight = surfaceView.height
         if (surfaceWidth > 0 && surfaceHeight > 0) {
-            displaySizeText = "$displaySizeText\n\n" +
-                    "Surface size:\n" +
-                    "    ${surfaceWidth}x${surfaceHeight}"
+            displaySizeText = "$displaySizeText\n" +
+                    "Surface: ${surfaceWidth}x${surfaceHeight}"
         }
 
         // format info
         if (formatWidth > 0 && formatHeight > 0) {
-            displaySizeText = "$displaySizeText\n\n" +
-                    "format size:\n" +
-                    "    ${formatWidth}x${formatHeight}"
+            displaySizeText = "$displaySizeText\n" +
+                    "format: ${formatWidth}x${formatHeight}"
         }
 
         tvDisplayInfo.post {

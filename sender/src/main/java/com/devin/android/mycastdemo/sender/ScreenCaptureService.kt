@@ -6,8 +6,11 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.hardware.display.DisplayManager
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
+import android.util.DisplayMetrics
+import android.view.Display
 import androidx.activity.result.ActivityResult
 import androidx.core.content.ContextCompat
 import com.devin.android.cast.core.NotificationHelper
@@ -57,6 +60,30 @@ class ScreenCaptureService : BaseService() {
     var captureManager: CaptureManager? = null
         private set
 
+    private var isRecording: Boolean = false
+    private val displayManager by lazy { getSystemService(DISPLAY_SERVICE) as DisplayManager }
+
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayChanged(displayId: Int) {
+            if (displayId != Display.DEFAULT_DISPLAY) return
+            if (!isRecording) return
+
+            val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
+            val metrics = DisplayMetrics()
+            display.getRealMetrics(metrics)
+
+            val screenWidth = metrics.widthPixels
+            val screenHeight = metrics.heightPixels
+
+            logInfo("${screenWidth}x${screenHeight}")
+
+            captureManager?.updateScreenSize(screenWidth, screenHeight)
+        }
+
+        override fun onDisplayAdded(displayId: Int) {}
+        override fun onDisplayRemoved(displayId: Int) {}
+    }
+
     override fun onCreate() {
         super.onCreate()
         logInfo()
@@ -78,6 +105,7 @@ class ScreenCaptureService : BaseService() {
             icon = R.drawable.ic_notification,
             serviceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
         )
+        displayManager.registerDisplayListener(displayListener, null)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -98,6 +126,7 @@ class ScreenCaptureService : BaseService() {
         logInfo()
         stopCapture()
         stopForegroundNotification(NOTIFICATION_ID)
+        displayManager.unregisterDisplayListener(displayListener)
         super.onDestroy()
     }
 
@@ -118,11 +147,13 @@ class ScreenCaptureService : BaseService() {
         val (width, height) = Utils.getScreenSize(applicationContext)
         manager.start(
             applicationContext,
-            CaptureConfig(width, 720, height, densityDpi)
+            CaptureConfig(width, height, densityDpi)
         )
+        isRecording = true
     }
 
     private fun stopCapture() {
+        isRecording = false
         logInfo()
         captureManager?.stop()
     }

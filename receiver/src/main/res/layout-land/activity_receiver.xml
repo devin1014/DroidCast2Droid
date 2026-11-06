@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:ignore="HardcodedText">
+    tools:ignore="HardcodedText,SpUsage">
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/receiverGuideline"
@@ -13,74 +13,89 @@
         android:orientation="vertical"
         app:layout_constraintGuide_percent="0.4" />
 
-    <LinearLayout
-        android:id="@+id/receiverLeft"
+    <ImageView
+        android:id="@+id/btnUrl"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="6dp"
+        android:background="?android:selectableItemBackgroundBorderless"
+        android:contentDescription="@null"
+        android:padding="8dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_arrow"
+        android:text="Url"
+        android:textAllCaps="false"
+        android:textSize="14dp"
+        app:layout_constraintBottom_toBottomOf="@id/etUrl"
+        app:layout_constraintEnd_toStartOf="@id/receiverGuideline"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/etUrl"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="#ffffff"
-        android:orientation="vertical"
-        android:paddingStart="4dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:autofillHints=""
+        android:hint="ws://192.168.5.x:8080/stream"
+        android:inputType="textUri"
+        android:maxLines="1"
+        android:paddingStart="0dp"
         android:paddingEnd="4dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@id/receiverGuideline"
+        android:textSize="16dp"
+        app:layout_constraintEnd_toStartOf="@id/btnUrl"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent" />
 
-        <EditText
-            android:id="@+id/etUrl"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:autofillHints=""
-            android:hint="WebSocket 地址, ws://192..."
-            android:inputType="textUri"
-            android:maxLines="1" />
+    <Button
+        android:id="@+id/btnConnect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="连接"
+        android:textSize="14dp"
+        app:layout_constraintStart_toStartOf="@id/etUrl"
+        app:layout_constraintTop_toBottomOf="@id/etUrl" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
+    <Button
+        android:id="@+id/btnDisconnect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="断开"
+        android:textSize="14dp"
+        app:layout_constraintStart_toEndOf="@id/btnConnect"
+        app:layout_constraintTop_toBottomOf="@id/etUrl" />
 
-            <Button
-                android:id="@+id/btnConnect"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="连接" />
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="6dp"
+        android:background="@drawable/bg_box_border"
+        android:padding="2dp"
+        android:text="未连接"
+        android:textColor="#ccff0000"
+        android:textSize="16dp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="@id/receiverGuideline"
+        app:layout_constraintStart_toStartOf="@id/etUrl"
+        app:layout_constraintTop_toBottomOf="@id/btnConnect"
+        tools:ignore="SpUsage" />
 
-            <Button
-                android:id="@+id/btnDisconnect"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="断开" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="未连接"
-            android:textColor="#ccff0000"
-            android:textSize="18dp"
-            android:textStyle="bold" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="#888888" />
-
-        <TextView
-            android:id="@+id/tvSizeInfo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text=""
-            android:textSize="18dp"
-            tools:ignore="SpUsage" />
-
-    </LinearLayout>
+    <TextView
+        android:id="@+id/tvSizeInfo"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="6dp"
+        android:background="@drawable/bg_box_border"
+        android:padding="2dp"
+        android:textColor="#000000"
+        android:textSize="16dp"
+        app:layout_constraintEnd_toEndOf="@id/receiverGuideline"
+        app:layout_constraintStart_toStartOf="@id/etUrl"
+        app:layout_constraintTop_toBottomOf="@id/tvStatus"
+        tools:ignore="SpUsage"
+        tools:text="Tv info" />
 
     <SurfaceView
         android:id="@+id/surfaceView"
@@ -89,7 +104,7 @@
         android:keepScreenOn="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/receiverLeft"
+        app:layout_constraintStart_toEndOf="@id/receiverGuideline"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ImageView
@@ -104,7 +119,17 @@
         android:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/receiverLeft"
+        app:layout_constraintStart_toEndOf="@id/receiverGuideline"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/bg_surface"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/surfaceView"
+        app:layout_constraintEnd_toEndOf="@id/surfaceView"
+        app:layout_constraintStart_toStartOf="@id/surfaceView"
+        app:layout_constraintTop_toTopOf="@id/surfaceView" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
