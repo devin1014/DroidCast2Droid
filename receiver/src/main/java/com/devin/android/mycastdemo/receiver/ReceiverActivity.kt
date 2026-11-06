@@ -177,6 +177,8 @@ class ReceiverActivity : AppCompatActivity() {
             },
             onDisconnected = { reason ->
                 updateStatus("已断开: $reason")
+                okHttpWebSocket?.disconnect()
+                okHttpWebSocket = null
             })
             .also { streamReceiver ->
                 streamReceiver.connect()

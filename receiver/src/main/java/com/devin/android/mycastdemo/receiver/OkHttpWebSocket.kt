@@ -31,7 +31,6 @@ class OkHttpWebSocket(
         .build()
 
     private var webSocket: WebSocket? = null
-    private val readBuffer = ArrayDeque<Byte>()
 
     fun reconnect() {
         val socket = webSocket ?: return
@@ -155,6 +154,5 @@ class OkHttpWebSocket(
     fun disconnect() {
         webSocket?.close(1000, "bye")
         webSocket = null
-        readBuffer.clear()
     }
 }

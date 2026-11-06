@@ -91,24 +91,22 @@ class CaptureManager private constructor(
 
         override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: BufferInfo) {
             logDebug("info flag=${info.flags}, size=${info.size}, offset=${info.offset}, timeUs=${info.presentationTimeUs}", clazzName = "MediaCodec-Callback")
-            if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
+            if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0
+                || info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME != 0
+            ) {
+                // info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
                 val configBuffer = codec.getOutputBuffer(index)
                 if (configBuffer != null) {
                     val data = ByteArray(info.size)
                     configBuffer.get(data)
-                    val videoBytes = FrameProtocol.packConfig(data, info.presentationTimeUs)
+                    val videoBytes =
+                        if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
+                            FrameProtocol.packConfig(data, info.presentationTimeUs)
+                        } else {
+                            FrameProtocol.packVideo(data, info.presentationTimeUs, true)
+                        }
                     callback?.onOutputBufferUpdate(videoBytes)
                 }
-            } else if (info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME != 0) {
-                val configBuffer = codec.getOutputBuffer(index)
-                if (configBuffer != null) {
-                    val data = ByteArray(info.size)
-                    configBuffer.get(data)
-                    val videoBytes = FrameProtocol.packVideo(data, info.presentationTimeUs, true)
-                    callback?.onOutputBufferUpdate(videoBytes)
-                }
-            } else if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                //TODO
             } else {
                 if (info.size > 0) {
                     val outputBuffer = codec.getOutputBuffer(index)
