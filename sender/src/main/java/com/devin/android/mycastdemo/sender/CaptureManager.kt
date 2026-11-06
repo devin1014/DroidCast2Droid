@@ -16,6 +16,7 @@ import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Surface
@@ -62,7 +63,6 @@ class CaptureManager private constructor(
     private var encoder: MediaCodec? = null
     var callback: OnCodecOutputCallback? = null
     private var curOutputFormatData: ByteArray? = null
-    private var lastOutputKeyFrameData: ByteArray? = null
     private var screenConfig: CaptureConfig? = null
 
     private val projectionCallback = object : MediaProjection.Callback() {
@@ -105,20 +105,20 @@ class CaptureManager private constructor(
                     val data = ByteArray(info.size)
                     configBuffer.get(data)
                     val videoBytes = FrameProtocol.packVideo(data, info.presentationTimeUs, true)
-                    callback?.onOutputBufferUpdate(videoBytes.also {
-                        lastOutputKeyFrameData = it
-                    })
+                    callback?.onOutputBufferUpdate(videoBytes)
                 }
             } else if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                 //TODO
             } else {
                 if (info.size > 0) {
                     val outputBuffer = codec.getOutputBuffer(index)
-                    val data = ByteArray(info.size)
-                    outputBuffer?.position(info.offset)
-                    outputBuffer?.get(data)
-                    val videoBytes = FrameProtocol.packVideo(data, info.presentationTimeUs, false)
-                    callback?.onOutputBufferUpdate(videoBytes)
+                    if (outputBuffer != null) {
+                        val data = ByteArray(info.size)
+                        outputBuffer.position(info.offset)
+                        outputBuffer.get(data)
+                        val videoBytes = FrameProtocol.packVideo(data, info.presentationTimeUs, false)
+                        callback?.onOutputBufferUpdate(videoBytes)
+                    }
                 }
             }
             codec.releaseOutputBuffer(index, false)
@@ -283,11 +283,14 @@ class CaptureManager private constructor(
 
     fun notifyOutputFormat() {
         curOutputFormatData?.also { bytes ->
+            logInfo("resend output format data...")
             callback?.onOutputBufferUpdate(bytes)
         }
-        lastOutputKeyFrameData?.also { bytes ->
-            callback?.onOutputBufferUpdate(bytes)
-        }
+        encoder?.setParameters(
+            Bundle().apply {
+                putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0)
+            }
+        )
     }
 
     private fun setupImageReader(reader: ImageReader, context: Context) {

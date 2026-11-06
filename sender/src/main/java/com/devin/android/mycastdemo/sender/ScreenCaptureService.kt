@@ -159,6 +159,7 @@ class ScreenCaptureService : BaseService() {
     }
 
     fun notifyNewClientConnected() {
+        logInfo()
         captureManager?.notifyOutputFormat()
     }
 
