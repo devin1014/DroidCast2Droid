@@ -1,4 +1,4 @@
-package com.devin.android.mycastdemo.sender
+package com.devin.android.mycastdemo.sender.video
 
 import android.annotation.SuppressLint
 import android.app.Activity.RESULT_OK
@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.hardware.display.DisplayManager
+import android.hardware.display.DisplayManager.DisplayListener
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import android.util.DisplayMetrics
@@ -20,6 +21,8 @@ import com.devin.android.cast.core.Utils
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.service.BaseService
 import com.devin.android.mycastdemo.R
+import com.devin.android.mycastdemo.sender.CaptureConfig
+import com.devin.android.mycastdemo.sender.audio.RecordAudioManager
 
 class ScreenCaptureService : BaseService() {
 
@@ -59,11 +62,13 @@ class ScreenCaptureService : BaseService() {
 
     var captureManager: CaptureManager? = null
         private set
+    var recordAudioManager: RecordAudioManager? = null
+        private set
 
     private var isRecording: Boolean = false
     private val displayManager by lazy { getSystemService(DISPLAY_SERVICE) as DisplayManager }
 
-    private val displayListener = object : DisplayManager.DisplayListener {
+    private val displayListener = object : DisplayListener {
         override fun onDisplayChanged(displayId: Int) {
             if (displayId != Display.DEFAULT_DISPLAY) return
             if (!isRecording) return
@@ -143,12 +148,20 @@ class ScreenCaptureService : BaseService() {
         }
         captureManager = manager
 
-        val densityDpi = resources.displayMetrics.densityDpi
-        val (width, height) = Utils.getScreenSize(applicationContext)
+        val (width, height, densityDpi) = Utils.getScreenSize(applicationContext)
         manager.start(
             applicationContext,
             CaptureConfig(width, height, densityDpi)
         )
+
+        RecordAudioManager().also { audioManager ->
+            audioManager.start(
+                applicationContext,
+                manager.mediaProjection
+            )
+            recordAudioManager = audioManager
+        }
+
         isRecording = true
     }
 
@@ -156,6 +169,7 @@ class ScreenCaptureService : BaseService() {
         isRecording = false
         logInfo()
         captureManager?.stop()
+        recordAudioManager?.stop()
     }
 
     fun notifyNewClientConnected() {

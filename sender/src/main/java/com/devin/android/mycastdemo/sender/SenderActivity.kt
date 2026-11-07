@@ -1,5 +1,6 @@
 package com.devin.android.mycastdemo.sender
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
@@ -20,7 +21,8 @@ import com.devin.android.cast.core.service.ServiceBinderConnection
 import com.devin.android.cast.core.startForegroundServiceCompat
 import com.devin.android.cast.core.stopServiceCompat
 import com.devin.android.mycastdemo.R
-import com.devin.android.mycastdemo.sender.CaptureManager.OnCodecOutputCallback
+import com.devin.android.mycastdemo.sender.video.OnCodecOutputCallback
+import com.devin.android.mycastdemo.sender.video.ScreenCaptureService
 import com.devin.android.mycastdemo.sender.websocket.WebSocketServer.WebSocketServerCallback
 import com.devin.android.mycastdemo.sender.websocket.WebSocketService
 import org.java_websocket.WebSocket
@@ -49,11 +51,19 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
                 this,
                 screenCaptureConnection
             )
-            "开始投屏"
+            "开始录屏"
         } else {
-            "投屏失败，请授权..."
+            "录屏失败，请授权..."
         }
         Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+    }
+
+    private val audioPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            Toast.makeText(this, "需要授权录音权限", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private var screenCaptureService: ScreenCaptureService? = null
@@ -96,6 +106,7 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
             screenCaptureLauncher.launch(
                 (getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager).createScreenCaptureIntent()
             )
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
         findViewById<View>(R.id.btnStop).setOnClickListener {
             screenCaptureConnection.unbindService(this)

@@ -14,14 +14,14 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 
 object Utils {
-    fun getScreenSize(context: Context): Pair<Int, Int> {
+    fun getScreenSize(context: Context): Triple<Int, Int, Int> {
         val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
         val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
             ?: throw IllegalStateException("Default display not found")
         val dm = DisplayMetrics()
         @Suppress("DEPRECATION")
         display.getRealMetrics(dm)
-        return dm.widthPixels to dm.heightPixels
+        return Triple(dm.widthPixels, dm.heightPixels, dm.densityDpi)
     }
 
     fun getActivitySize(activity: Activity): Pair<Int, Int> {

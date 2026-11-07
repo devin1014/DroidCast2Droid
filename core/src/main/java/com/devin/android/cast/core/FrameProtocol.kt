@@ -7,6 +7,9 @@ object FrameProtocol {
 
     const val COMMAND_GET_VIDEO_FORMAT = "video:get-format"
 
+    const val DATA_AUDIO = 0x01.toByte()
+    const val DATA_VIDEO = 0x02.toByte()
+
     const val TYPE_FORMAT = 0x01.toByte()
     const val TYPE_VIDEO_CONFIG = 0x02.toByte()
     const val TYPE_VIDEO_FRAME = 0x04.toByte()
@@ -15,7 +18,7 @@ object FrameProtocol {
     const val FRAME_TYPE_KEY = 1   // 关键帧
     const val FRAME_TYPE_OTHER = 2 // 普通帧
 
-    fun packFormat(
+    fun packVideoFormat(
         width: Int,
         height: Int,
         bitrate: Int,
@@ -26,7 +29,8 @@ object FrameProtocol {
         val payloadSize = 20 + csd0Bytes.size + csd1Bytes.size
 
         // type + payload
-        val buffer = ByteBuffer.allocate(1 + 4 + payloadSize)
+        val buffer = ByteBuffer.allocate(1 + 1 + 4 + payloadSize)
+        buffer.put(DATA_VIDEO)
         buffer.put(TYPE_FORMAT)
         buffer.putInt(payloadSize)
         buffer.putInt(width)
@@ -39,13 +43,14 @@ object FrameProtocol {
         return buffer.array()
     }
 
-    fun packConfig(
+    fun packVideoConfig(
         data: ByteArray,
         presentationTimeUs: Long,
     ): ByteArray {
         // 载荷长度 = 8字节时间戳 + 4字节帧类型 + 视频数据长度
         val payloadSize = 8 + 4 + data.size
-        val buffer = ByteBuffer.allocate(1 + 4 + payloadSize)
+        val buffer = ByteBuffer.allocate(1 + 1 + 4 + payloadSize)
+        buffer.put(DATA_VIDEO)                 // 1字节: AUDIO、VIDEO
         buffer.put(TYPE_VIDEO_CONFIG)          // 1字节：类型
         buffer.putInt(payloadSize)          // 4字节：载荷长度
         buffer.putLong(presentationTimeUs)  // 8字节：时间戳（解码和渲染必须）
@@ -54,7 +59,7 @@ object FrameProtocol {
         return buffer.array()
     }
 
-    fun packVideo(
+    fun packVideoFrame(
         data: ByteArray,
         presentationTimeUs: Long,
         isKeyFrame: Boolean,
@@ -62,7 +67,8 @@ object FrameProtocol {
         val frameType = if (isKeyFrame) FRAME_TYPE_KEY else FRAME_TYPE_OTHER
         // 载荷长度 = 8字节时间戳 + 4字节帧类型 + 视频数据长度
         val payloadSize = 8 + 4 + data.size
-        val buffer = ByteBuffer.allocate(1 + 4 + payloadSize)
+        val buffer = ByteBuffer.allocate(1 + 1 + 4 + payloadSize)
+        buffer.put(DATA_VIDEO)                 // 1字节: AUDIO、VIDEO
         buffer.put(TYPE_VIDEO_FRAME)           // 1字节：类型
         buffer.putInt(payloadSize)          // 4字节：载荷长度
         buffer.putLong(presentationTimeUs)  // 8字节：时间戳（解码和渲染必须）

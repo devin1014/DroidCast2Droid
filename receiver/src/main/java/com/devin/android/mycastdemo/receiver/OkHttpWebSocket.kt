@@ -71,14 +71,15 @@ class OkHttpWebSocket(
         val byteBuffer = bytes.asByteBuffer()
 
         // 2. 检查基础报头长度 (1字节Type + 4字节PayloadLen = 5字节)
-        if (byteBuffer.remaining() < 5) {
+        if (byteBuffer.remaining() < 6) {
             logWarn("数据包过短，无法解析包头", clazzName = "WebSocketListener")
             return
         }
 
         // 3. 读取包头
-        val type = byteBuffer.get() // 读取1字节类型
-        val payloadLen = byteBuffer.getInt() // 读取4字节载荷长度
+        val dataType = byteBuffer.get()         // Audio, Video
+        val type = byteBuffer.get()             // 读取1字节类型
+        val payloadLen = byteBuffer.getInt()    // 读取4字节载荷长度
 
         // 4. 验证剩余字节是否和声明的载荷长度相符
         if (byteBuffer.remaining() < payloadLen) {
@@ -86,21 +87,25 @@ class OkHttpWebSocket(
             return
         }
 
-        // 5. 根据类型进行分流解析
-        when (type) {
-            TYPE_FORMAT -> {
-                parseFormatPacket(byteBuffer)
-            }
+        if (dataType == FrameProtocol.DATA_VIDEO) {
+            // 5. 根据类型进行分流解析
+            when (type) {
+                TYPE_FORMAT -> {
+                    parseFormatPacket(byteBuffer)
+                }
 
-            TYPE_VIDEO_CONFIG -> {
-                parseVideoFramePacket(true, byteBuffer)
-            }
+                TYPE_VIDEO_CONFIG -> {
+                    parseVideoFramePacket(true, byteBuffer)
+                }
 
-            TYPE_VIDEO_FRAME -> {
-                parseVideoFramePacket(false, byteBuffer)
-            }
+                TYPE_VIDEO_FRAME -> {
+                    parseVideoFramePacket(false, byteBuffer)
+                }
 
-            else -> {}
+                else -> {}
+            }
+        } else if (dataType == FrameProtocol.DATA_AUDIO) {
+            //TODO
         }
     }
 

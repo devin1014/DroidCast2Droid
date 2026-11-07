@@ -1,9 +1,10 @@
-package com.devin.android.mycastdemo.sender
+package com.devin.android.mycastdemo.sender.video
 
 import android.content.Context
 import android.content.Context.MEDIA_PROJECTION_SERVICE
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Bitmap.CompressFormat
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
@@ -12,7 +13,7 @@ import android.media.MediaCodec
 import android.media.MediaCodec.BufferInfo
 import android.media.MediaCodec.Callback
 import android.media.MediaCodec.CodecException
-import android.media.MediaCodecInfo
+import android.media.MediaCodecInfo.CodecCapabilities
 import android.media.MediaFormat
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
@@ -26,12 +27,17 @@ import com.devin.android.cast.core.logDebug
 import com.devin.android.cast.core.logError
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.logWarn
+import com.devin.android.mycastdemo.sender.CaptureConfig
 import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
 
+interface OnCodecOutputCallback {
+    fun onOutputBufferUpdate(data: ByteArray)
+}
+
 class CaptureManager private constructor(
-    private val mediaProjection: MediaProjection,
+    val mediaProjection: MediaProjection,
 ) {
     companion object {
         private const val MIME_TYPE_VIDEO = "video/avc"
@@ -53,10 +59,6 @@ class CaptureManager private constructor(
                 return null
             }
         }
-    }
-
-    interface OnCodecOutputCallback {
-        fun onOutputBufferUpdate(data: ByteArray)
     }
 
     private var virtualDisplay: VirtualDisplay? = null
@@ -82,15 +84,15 @@ class CaptureManager private constructor(
 
     private val codecCallback = object : Callback() {
         override fun onError(codec: MediaCodec, e: CodecException) {
-            logInfo("error=$e", clazzName = "MediaCodec-Callback")
+            logInfo("error=$e", clazzName = "MediaCodec-Callback-V")
         }
 
         override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
-            logInfo("index=$index", clazzName = "MediaCodec-Callback")
+            logInfo("index=$index", clazzName = "MediaCodec-Callback-V")
         }
 
         override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: BufferInfo) {
-            logDebug("info flag=${info.flags}, size=${info.size}, offset=${info.offset}, timeUs=${info.presentationTimeUs}", clazzName = "MediaCodec-Callback")
+            logDebug("info flag=${info.flags}, size=${info.size}, offset=${info.offset}, timeUs=${info.presentationTimeUs}", clazzName = "MediaCodec-Callback-V")
             if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0
                 || info.flags and MediaCodec.BUFFER_FLAG_KEY_FRAME != 0
             ) {
@@ -101,9 +103,9 @@ class CaptureManager private constructor(
                     configBuffer.get(data)
                     val videoBytes =
                         if (info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
-                            FrameProtocol.packConfig(data, info.presentationTimeUs)
+                            FrameProtocol.packVideoConfig(data, info.presentationTimeUs)
                         } else {
-                            FrameProtocol.packVideo(data, info.presentationTimeUs, true)
+                            FrameProtocol.packVideoFrame(data, info.presentationTimeUs, true)
                         }
                     callback?.onOutputBufferUpdate(videoBytes)
                 }
@@ -114,7 +116,7 @@ class CaptureManager private constructor(
                         val data = ByteArray(info.size)
                         outputBuffer.position(info.offset)
                         outputBuffer.get(data)
-                        val videoBytes = FrameProtocol.packVideo(data, info.presentationTimeUs, false)
+                        val videoBytes = FrameProtocol.packVideoFrame(data, info.presentationTimeUs, false)
                         callback?.onOutputBufferUpdate(videoBytes)
                     }
                 }
@@ -123,7 +125,7 @@ class CaptureManager private constructor(
         }
 
         override fun onOutputFormatChanged(codec: MediaCodec, format: MediaFormat) {
-            logInfo("format=$format", clazzName = "MediaCodec-Callback")
+            logInfo("format=$format", clazzName = "MediaCodec-Callback-V")
 
             val width = format.getInteger(MediaFormat.KEY_WIDTH)
             val height = format.getInteger(MediaFormat.KEY_HEIGHT)
@@ -146,7 +148,7 @@ class CaptureManager private constructor(
             } ?: byteArrayOf()
 
             callback?.onOutputBufferUpdate(
-                FrameProtocol.packFormat(width, height, bitrate, csd0Bytes, csd1Bytes).also {
+                FrameProtocol.packVideoFormat(width, height, bitrate, csd0Bytes, csd1Bytes).also {
                     curOutputFormatData = it
                 }
             )
@@ -177,7 +179,7 @@ class CaptureManager private constructor(
 
             configure(
                 MediaFormat.createVideoFormat(MIME_TYPE_VIDEO, targetWidth, targetHeight).apply {
-                    setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
+                    setInteger(MediaFormat.KEY_COLOR_FORMAT, CodecCapabilities.COLOR_FormatSurface)
                     setInteger(MediaFormat.KEY_BIT_RATE, config.bitrate)
                     setInteger(MediaFormat.KEY_FRAME_RATE, config.frameRate)
                     setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, config.keyFrameInterval)
@@ -325,7 +327,7 @@ class CaptureManager private constructor(
                     ?: throw IllegalStateException("external files dir is null")
                 val file = File(dir, "capture_frame.png")
                 FileOutputStream(file).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    bitmap.compress(CompressFormat.PNG, 100, out)
                 }
                 logInfo("saved to ${file.absolutePath}")
                 bitmap.recycle()
