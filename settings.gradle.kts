@@ -26,4 +26,3 @@ rootProject.name = "MyCastDemo"
 include(":sender")
 include(":receiver")
 include(":core")
-include(":java-client")

@@ -47,7 +47,8 @@ class OkHttpWebSocket(
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     // 连接成功，等待发送端推流
                     logInfo(
-                        "code=${response.code} msg=${response.message} \nheader=${response.headers}",
+                        "code=${response.code}, msg=${response.message}\n" +
+                                "  header:\n    ${response.headers.joinToString("\n    ") { "${it.first}=${it.second}" }}",
                         clazzName = "${WebSocketListener::class.simpleName}"
                     )
                     onConnected()

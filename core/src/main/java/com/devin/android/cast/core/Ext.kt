@@ -9,47 +9,47 @@ import androidx.core.text.isDigitsOnly
 import timber.log.Timber
 import java.util.logging.Level
 
-inline fun logDebug(
+inline fun Any.logDebug(
     message: String = "",
     clazzName: String? = null,
 ) {
     val trace = Throwable().stackTrace[0]
-    val className = clazzName ?: parentClassName(trace.className.substringAfterLast("."))
-    val methodName = trace.methodName
+    val className = clazzName ?: this::class.simpleName ?: parentClassName(trace.className.substringAfterLast("."))
+    val methodName = parseMethodName(trace.methodName)
     val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: ""}"
     log(className, text, Level.CONFIG)
 }
 
-inline fun logInfo(
+inline fun Any.logInfo(
     message: String = "",
     clazzName: String? = null,
 ) {
     val trace = Throwable().stackTrace[0]
-    val className = clazzName ?: parentClassName(trace.className.substringAfterLast("."))
-    val methodName = trace.methodName
+    val className = clazzName ?: this::class.simpleName ?: parentClassName(trace.className.substringAfterLast("."))
+    val methodName = parseMethodName(trace.methodName)
     val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: ""}"
     log(className, text, Level.INFO)
 }
 
-inline fun logWarn(
+inline fun Any.logWarn(
     message: String = "",
     clazzName: String? = null,
 ) {
     val trace = Throwable().stackTrace[0]
-    val className = clazzName ?: parentClassName(trace.className.substringAfterLast("."))
-    val methodName = trace.methodName
+    val className = clazzName ?: this::class.simpleName ?: parentClassName(trace.className.substringAfterLast("."))
+    val methodName = parseMethodName(trace.methodName)
     val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: ""}"
     log(className, text, Level.WARNING)
 }
 
-inline fun logError(
+inline fun Any.logError(
     message: String = "",
     clazzName: String? = null,
 ) {
     val trace = Throwable().stackTrace[0]
-    val className = clazzName ?: parentClassName(trace.className.substringAfterLast("."))
-    val methodName = trace.methodName
-    val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: ""}"
+    val className = clazzName ?: this::class.simpleName ?: parentClassName(trace.className.substringAfterLast("."))
+    val methodName = parseMethodName(trace.methodName)
+    val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { "=> $it" } ?: ""}"
     log(className, text, Level.SEVERE)
 }
 
@@ -66,6 +66,10 @@ fun log(
             Level.SEVERE -> e(message)
         }
     }
+}
+
+fun parseMethodName(name: String): String {
+    return if (name.split("$").last().isDigitsOnly()) "" else name
 }
 
 fun parentClassName(name: String): String {

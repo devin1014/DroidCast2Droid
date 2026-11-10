@@ -53,9 +53,9 @@ class AudioDecoder private constructor(private val sampleRate: Int) {
                 setByteBuffer("csd-0", ByteBuffer.wrap(csd0))
             }
             logInfo(
-                "create decoder:\n" +
+                "\n" +
                         "    bitrate=$bitrate, sampleRate=$sampleRate, channelCount=$channelCount\n" +
-                        "    csd0=${csd0.joinToString() { "%02x".format(it) }}\n" +
+                        "    csd0=${csd0.joinToString(",") { "%02x".format(it) }}\n" +
                         "    $format",
                 "${AudioDecoder::class.simpleName}"
             )
@@ -138,7 +138,7 @@ class AudioDecoder private constructor(private val sampleRate: Int) {
                 out.get(bytes)
 //                logDebug("first bytes=${bytes.take(16).joinToString()}", clazzName = "${AudioDecoder::class.simpleName}")
                 val writeSize = audioTrack?.write(bytes, 0, bytes.size, AudioTrack.WRITE_BLOCKING)
-//                logDebug("write: $writeSize", clazzName = "${AudioDecoder::class.simpleName}")
+                logDebug("audioTrack write: $writeSize/${bytes.size}", clazzName = "${AudioDecoder::class.simpleName}")
             }
             codec.releaseOutputBuffer(index, false)
         }
