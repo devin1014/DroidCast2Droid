@@ -62,6 +62,16 @@
             app:layout_constraintStart_toEndOf="@id/btnConnect"
             app:layout_constraintTop_toBottomOf="@id/etUrl" />
 
+        <Button
+            android:id="@+id/btnTestAudioTrack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="播放 Audio"
+            android:textAllCaps="false"
+            android:textSize="14dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/etUrl" />
+
         <TextView
             android:id="@+id/tvStatus"
             android:layout_width="0dp"

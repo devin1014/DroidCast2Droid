@@ -24,6 +24,9 @@ class OkHttpWebSocket(
     private val onVideoFormatReceived: (width: Int, height: Int, bitrate: Int, csd0: ByteArray, csd1: ByteArray) -> Unit,
     private val onVideoConfigReceived: (data: ByteArray, presentationTimeUs: Long) -> Unit,
     private val onVideoFrameReceived: (data: ByteArray, presentationTimeUs: Long, isKeyFrame: Boolean) -> Unit,
+    private val onAudioFormatReceived: (bitrate: Int, csd0: ByteArray) -> Unit,
+    private val onAudioConfigReceived: (data: ByteArray, presentationTimeUs: Long) -> Unit,
+    private val onAudioFrameReceived: (data: ByteArray, presentationTimeUs: Long, isKeyFrame: Boolean) -> Unit,
     private val onDisconnected: (reason: String) -> Unit,
 ) {
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -45,7 +48,7 @@ class OkHttpWebSocket(
                     // 连接成功，等待发送端推流
                     logInfo(
                         "code=${response.code} msg=${response.message} \nheader=${response.headers}",
-                        clazzName = "WebSocketListener"
+                        clazzName = "${WebSocketListener::class.simpleName}"
                     )
                     onConnected()
                 }
@@ -55,12 +58,12 @@ class OkHttpWebSocket(
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                    logWarn("$code=$code, reason=$reason", clazzName = "WebSocketListener")
+                    logWarn("$code=$code, reason=$reason", clazzName = "${WebSocketListener::class.simpleName}")
                     onDisconnected(reason)
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    logError("error=$t", clazzName = "WebSocketListener")
+                    logError("error=$t", clazzName = "${WebSocketListener::class.simpleName}")
                     onDisconnected(t.message ?: "unknown")
                 }
             })
@@ -72,7 +75,7 @@ class OkHttpWebSocket(
 
         // 2. 检查基础报头长度 (1字节Type + 4字节PayloadLen = 5字节)
         if (byteBuffer.remaining() < 6) {
-            logWarn("数据包过短，无法解析包头", clazzName = "WebSocketListener")
+            logWarn("数据包过短，无法解析包头", clazzName = "${WebSocketListener::class.simpleName}")
             return
         }
 
@@ -83,36 +86,44 @@ class OkHttpWebSocket(
 
         // 4. 验证剩余字节是否和声明的载荷长度相符
         if (byteBuffer.remaining() < payloadLen) {
-            logWarn("数据不完整，期望载荷: " + payloadLen + ", 实际剩余: " + byteBuffer.remaining(), clazzName = "WebSocketListener")
+            logWarn("数据不完整，期望载荷: " + payloadLen + ", 实际剩余: " + byteBuffer.remaining(), clazzName = "${WebSocketListener::class.simpleName}")
             return
         }
 
-        if (dataType == FrameProtocol.DATA_VIDEO) {
-            // 5. 根据类型进行分流解析
-            when (type) {
-                TYPE_FORMAT -> {
-                    parseFormatPacket(byteBuffer)
+        // 5. 根据类型进行分流解析
+        when (type) {
+            TYPE_FORMAT -> {
+                if (dataType == FrameProtocol.DATA_VIDEO) {
+                    parseVideoFormatPacket(byteBuffer)
+                } else if (dataType == FrameProtocol.DATA_AUDIO) {
+                    parseAudioFormatPacket(byteBuffer)
                 }
-
-                TYPE_VIDEO_CONFIG -> {
-                    parseVideoFramePacket(true, byteBuffer)
-                }
-
-                TYPE_VIDEO_FRAME -> {
-                    parseVideoFramePacket(false, byteBuffer)
-                }
-
-                else -> {}
             }
-        } else if (dataType == FrameProtocol.DATA_AUDIO) {
-            //TODO
+
+            TYPE_VIDEO_CONFIG -> {
+                if (dataType == FrameProtocol.DATA_VIDEO) {
+                    parseVideoFramePacket(true, byteBuffer)
+                } else if (dataType == FrameProtocol.DATA_AUDIO) {
+                    parseAudioFramePacket(true, byteBuffer)
+                }
+            }
+
+            TYPE_VIDEO_FRAME -> {
+                if (dataType == FrameProtocol.DATA_VIDEO) {
+                    parseVideoFramePacket(false, byteBuffer)
+                } else if (dataType == FrameProtocol.DATA_AUDIO) {
+                    parseAudioFramePacket(false, byteBuffer)
+                }
+            }
+
+            else -> {}
         }
     }
 
     /**
      * 解析格式配置包 (TYPE_FORMAT = 0x01)
      */
-    private fun parseFormatPacket(buffer: ByteBuffer) {
+    private fun parseVideoFormatPacket(buffer: ByteBuffer) {
         val width = buffer.getInt()
         val height = buffer.getInt()
         val bitrate = buffer.getInt()
@@ -128,8 +139,19 @@ class OkHttpWebSocket(
         if (csd1Len > 0) {
             buffer.get(csd1)
         }
-        logInfo("width=$width, height=$height, bitrate=$bitrate, csd0=[$csd0Len], csd1=[$csd1Len]", clazzName = "WebSocketListener")
+        logInfo("width=$width, height=$height, bitrate=$bitrate, csd0=[$csd0Len], csd1=[$csd1Len]", clazzName = "${WebSocketListener::class.simpleName}")
         onVideoFormatReceived(width, height, bitrate, csd0, csd1)
+    }
+
+    private fun parseAudioFormatPacket(buffer: ByteBuffer) {
+        val bitrate = buffer.getInt()
+        val csd0Len = buffer.getInt()
+        val csd0 = ByteArray(csd0Len)
+        if (csd0Len > 0) {
+            buffer.get(csd0)
+        }
+        logInfo("bitrate=$bitrate, csd0=[${csd0Len}]", clazzName = "${WebSocketListener::class.simpleName}")
+        onAudioFormatReceived(bitrate, csd0)
     }
 
     /**
@@ -153,6 +175,27 @@ class OkHttpWebSocket(
                 logDebug("video frame: $frameSize")
             }
             onVideoFrameReceived(frameData, presentationTimeUs, isKeyFrame)
+        }
+    }
+
+    private fun parseAudioFramePacket(isConfig: Boolean, buffer: ByteBuffer) {
+        val presentationTimeUs = buffer.getLong()   // 提取 8 字节时间戳
+        val frameType = buffer.getInt()             // 提取 4 字节帧类型
+        val isKeyFrame = frameType == FrameProtocol.FRAME_TYPE_KEY
+
+        val frameSize = buffer.remaining()
+        val frameData = ByteArray(frameSize)
+        buffer.get(frameData)
+        if (isConfig) {
+            logInfo("audio config")
+            onAudioConfigReceived(frameData, presentationTimeUs)
+        } else {
+            if (isKeyFrame) {
+                logInfo("audio key frame: $frameSize")
+            } else {
+                logDebug("audio frame: $frameSize")
+            }
+            onAudioFrameReceived(frameData, presentationTimeUs, isKeyFrame)
         }
     }
 

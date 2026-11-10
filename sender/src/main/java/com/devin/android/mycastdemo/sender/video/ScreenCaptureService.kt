@@ -24,7 +24,7 @@ import com.devin.android.mycastdemo.R
 import com.devin.android.mycastdemo.sender.CaptureConfig
 import com.devin.android.mycastdemo.sender.audio.RecordAudioManager
 
-class ScreenCaptureService : BaseService() {
+class ScreenCaptureService : BaseService(), OnCodecOutputCallback {
 
     companion object {
         const val ACTION_START = "action_start"
@@ -60,10 +60,15 @@ class ScreenCaptureService : BaseService() {
         }
     }
 
-    var captureManager: CaptureManager? = null
-        private set
-    var recordAudioManager: RecordAudioManager? = null
-        private set
+    private var captureManager: CaptureManager? = null
+    private var recordAudioManager: RecordAudioManager? = null
+
+    @Volatile
+    var callback: OnCodecOutputCallback? = null
+        set(value) {
+            field = value
+            updateOutputCallback(value)
+        }
 
     private var isRecording: Boolean = false
     private val displayManager by lazy { getSystemService(DISPLAY_SERVICE) as DisplayManager }
@@ -141,7 +146,7 @@ class ScreenCaptureService : BaseService() {
     ) {
         // media projection has started.
         if (captureManager != null) return
-        val manager = CaptureManager.create(this, resultCode, resultData)
+        val manager = CaptureManager.create(this, this, resultCode, resultData)
         if (manager == null) {
             stopSelf()
             return
@@ -154,7 +159,7 @@ class ScreenCaptureService : BaseService() {
             CaptureConfig(width, height, densityDpi)
         )
 
-        RecordAudioManager().also { audioManager ->
+        RecordAudioManager(callback = this).also { audioManager ->
             audioManager.start(
                 applicationContext,
                 manager.mediaProjection
@@ -175,6 +180,56 @@ class ScreenCaptureService : BaseService() {
     fun notifyNewClientConnected() {
         logInfo()
         captureManager?.notifyOutputFormat()
+        recordAudioManager?.notifyOutputFormat()
     }
 
+    private val queue = ArrayDeque<ByteArray>()
+
+    override fun onOutputBufferUpdate(data: ByteArray) {
+        val cb = callback
+        if (cb == null) {
+            // callback 为空，数据入队
+            synchronized(queue) {
+                queue.add(data)
+                logInfo("add queue")
+                // 可选：防止内存溢出，设置上限丢弃最旧数据
+                if (queue.size > 128) {
+                    queue.removeFirst()
+                    logInfo("queue size is bigger than 128")
+                }
+            }
+            return
+        }
+
+        if (queue.isNotEmpty()) {
+            logInfo("queue is not empty. size=[${queue.size}]")
+            // callback 有值，先 flush queue，再发当前帧
+            val toSend = synchronized(queue) {
+                val list = ArrayList<ByteArray>(queue)
+                queue.clear()
+                list
+            }
+
+            for (frame in toSend) {
+                cb.onOutputBufferUpdate(frame)
+            }
+        }
+
+        cb.onOutputBufferUpdate(data)
+    }
+
+    private fun updateOutputCallback(callback: OnCodecOutputCallback?) {
+        // 如果新 callback 不为空，设置前先 flush 一次 queue
+        if (callback != null) {
+            val toSend = synchronized(queue) {
+                val list = ArrayList<ByteArray>(queue)
+                queue.clear()
+                list
+            }
+            logInfo("reset callback, queue is [${toSend.size}]")
+            for (frame in toSend) {
+                callback.onOutputBufferUpdate(frame)
+            }
+        }
+    }
 }

@@ -7,7 +7,7 @@ import android.view.Surface
 import com.devin.android.cast.core.logDebug
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.logWarn
-import com.devin.android.mycastdemo.receiver.FrameData.VideoConfigData
+import com.devin.android.mycastdemo.receiver.FrameData.ConfigFrameData
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -53,10 +53,10 @@ class VideoDecoder private constructor() : Thread() {
                 VideoDecoder().apply {
                     this.mediaCodec = codec
                     codec.start()
-                    logInfo("MediaCodec start success!")
+                    logInfo("MediaCodec start success!", clazzName = "${VideoDecoder::class.simpleName}")
                 }
             } catch (e: Exception) {
-                logInfo("createDecoderByType: $MIME_TYPE, failed $e")
+                logInfo("createDecoderByType: $MIME_TYPE, failed $e", clazzName = "${VideoDecoder::class.simpleName}")
                 null
             }
         }
@@ -110,11 +110,11 @@ class VideoDecoder private constructor() : Thread() {
                     if (packet.data.size > 4) {
                         // 打印每帧数据的前 5 个字节的十六进制
                         val hexString = packet.data.take(5).joinToString(" ") { String.format("%02X", it) }
-                        logDebug("▶ input ==> size: ${packet.data.size}, 前5字节: $hexString, 是否关键帧: ${packet.isKeyFrame}", clazzName = "DecodeLoop")
+                        logDebug("▶ input ==> size: ${packet.data.size}, 前5字节: $hexString, 是否关键帧: ${packet.isKeyFrame}", clazzName = "${VideoDecoder::class.simpleName}")
                     }
 
                     // 如果你坚持要在循环中处理配置帧，请保留这段；如果已经在外层 configure 时传入了 CSD，可直接删掉此 if
-                    if (packet is VideoConfigData) {
+                    if (packet is ConfigFrameData) {
 //                        val inputIndex = codec.dequeueInputBuffer(TIMEOUT_US)
 //                        if (inputIndex >= 0) {
 //                            val inputBuffer = codec.getInputBuffer(inputIndex)
@@ -150,11 +150,11 @@ class VideoDecoder private constructor() : Thread() {
                     }
                 }
             } catch (e: IllegalStateException) {
-                logInfo("Input dequeue IllegalStateException: ${e::class.simpleName}, ${e.message}")
+                logInfo("Input dequeue IllegalStateException: ${e::class.simpleName}, ${e.message}", clazzName = "${VideoDecoder::class.simpleName}")
                 isInterrupted
                 break
             } catch (e: Exception) {
-                logInfo("Input loop error: $e")
+                logInfo("Input loop error: $e", clazzName = "${VideoDecoder::class.simpleName}")
                 isInterrupted
                 break
             }
@@ -179,7 +179,7 @@ class VideoDecoder private constructor() : Thread() {
                         else -> {
                             if (outputIndex >= 0) {
                                 // 打印 BufferInfo 的元数据
-                                logDebug("★ output ==> size: ${info.size}, pts: ${info.presentationTimeUs}, flags: ${info.flags}", clazzName = "DecodeLoop")
+                                logDebug("★ output ==> size: ${info.size}, pts: ${info.presentationTimeUs}, flags: ${info.flags}", clazzName = "${VideoDecoder::class.simpleName}")
                                 // true 表示直接让 MediaCodec 把这一帧的数据渲染到你绑定的 Surface/TextureView 上
                                 codec.releaseOutputBuffer(outputIndex, true)
 
@@ -192,7 +192,7 @@ class VideoDecoder private constructor() : Thread() {
                     }
                 }
             } catch (e: IllegalStateException) {
-                logInfo("Output dequeue IllegalStateException: ${e::class.simpleName}, ${e.message}")
+                logInfo("Output dequeue IllegalStateException: ${e::class.simpleName}, ${e.message}", clazzName = "${VideoDecoder::class.simpleName}")
                 isInterrupted
                 break
             }
@@ -210,6 +210,6 @@ class VideoDecoder private constructor() : Thread() {
 }
 
 sealed class FrameData(val data: ByteArray, val timestampUs: Long, val isKeyFrame: Boolean) {
-    class VideoConfigData(data: ByteArray, timestampUs: Long) : FrameData(data, timestampUs, false)
-    class VideoFrameData(data: ByteArray, timestampUs: Long, isKeyFrame: Boolean) : FrameData(data, timestampUs, isKeyFrame)
+    class ConfigFrameData(data: ByteArray, timestampUs: Long) : FrameData(data, timestampUs, false)
+    class ContentFrameData(data: ByteArray, timestampUs: Long, isKeyFrame: Boolean) : FrameData(data, timestampUs, isKeyFrame)
 }

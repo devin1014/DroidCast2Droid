@@ -43,6 +43,24 @@ object FrameProtocol {
         return buffer.array()
     }
 
+    fun packAudioFormat(
+        bitrate: Int,
+        csd0Bytes: ByteArray,
+    ): ByteArray {
+        // 2 int + csd0
+        val payloadSize = 8 + csd0Bytes.size
+
+        // type + payload
+        val buffer = ByteBuffer.allocate(1 + 1 + 4 + payloadSize)
+        buffer.put(DATA_AUDIO)
+        buffer.put(TYPE_FORMAT)
+        buffer.putInt(payloadSize)
+        buffer.putInt(bitrate)
+        buffer.putInt(csd0Bytes.size)
+        buffer.put(csd0Bytes)
+        return buffer.array()
+    }
+
     fun packVideoConfig(
         data: ByteArray,
         presentationTimeUs: Long,
@@ -55,6 +73,24 @@ object FrameProtocol {
         buffer.putInt(payloadSize)          // 4字节：载荷长度
         buffer.putLong(presentationTimeUs)  // 8字节：时间戳（解码和渲染必须）
         buffer.putInt(FRAME_TYPE_OTHER)     // 4字节：帧类型
+        buffer.put(data)                      // 剩余：视频帧数据
+        return buffer.array()
+    }
+
+    fun packAudioFrame(
+        data: ByteArray,
+        presentationTimeUs: Long,
+        isKeyFrame: Boolean,
+    ): ByteArray {
+        val frameType = if (isKeyFrame) FRAME_TYPE_KEY else FRAME_TYPE_OTHER
+        // 载荷长度 = 8字节时间戳 + 4字节帧类型 + 视频数据长度
+        val payloadSize = 8 + 4 + data.size
+        val buffer = ByteBuffer.allocate(1 + 1 + 4 + payloadSize)
+        buffer.put(DATA_AUDIO)                 // 1字节: AUDIO、VIDEO
+        buffer.put(TYPE_VIDEO_FRAME)           // 1字节：类型
+        buffer.putInt(payloadSize)          // 4字节：载荷长度
+        buffer.putLong(presentationTimeUs)  // 8字节：时间戳（解码和渲染必须）
+        buffer.putInt(frameType)            // 4字节：帧类型
         buffer.put(data)                      // 剩余：视频帧数据
         return buffer.array()
     }

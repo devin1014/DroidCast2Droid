@@ -101,3 +101,14 @@ inline fun <reified T : Service> bindServiceCompat(
         flags
     )
 }
+
+fun ByteArray.chunked(size: Int): List<ByteArray> {
+    val result = mutableListOf<ByteArray>()
+    var index = 0
+    while (index < this.size) {
+        val end = minOf(index + size, this.size)
+        result.add(copyOfRange(index, end))
+        index = end
+    }
+    return result
+}

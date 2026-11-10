@@ -16,8 +16,9 @@ import com.devin.android.cast.core.Constants.URL_HOLDER
 import com.devin.android.cast.core.Utils
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.logWarn
-import com.devin.android.mycastdemo.receiver.FrameData.VideoConfigData
-import com.devin.android.mycastdemo.receiver.FrameData.VideoFrameData
+import com.devin.android.mycastdemo.receiver.FrameData.ConfigFrameData
+import com.devin.android.mycastdemo.receiver.FrameData.ContentFrameData
+import com.devin.android.mycastdemo.receiver.audio.AudioTrackSample
 
 class ReceiverActivity : AppCompatActivity() {
 
@@ -28,7 +29,8 @@ class ReceiverActivity : AppCompatActivity() {
 
     private var surfaceHolder: SurfaceHolder? = null
     private var okHttpWebSocket: OkHttpWebSocket? = null
-    private var decoder: VideoDecoder? = null
+    private var videoDecoder: VideoDecoder? = null
+    private var audioDecoder: AudioDecoder? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -55,6 +57,10 @@ class ReceiverActivity : AppCompatActivity() {
             disconnect()
         }
 
+        findViewById<View>(R.id.btnTestAudioTrack).setOnClickListener {
+            AudioTrackSample.play()
+        }
+
         surfaceView.holder.addCallback(object : Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 logInfo("holder=0x${holder.hashCode().toHexString()}", clazzName = "SurfaceCallback")
@@ -66,7 +72,7 @@ class ReceiverActivity : AppCompatActivity() {
                 // 如需根据分辨率重新配置解码器，可在这里处理
                 logInfo("holder=0x${holder.hashCode().toHexString()}, format=$format, ${width}x${height}", clazzName = "SurfaceCallback")
                 resetDisplaySizeInfo()
-                if (decoder == null) {
+                if (videoDecoder == null) {
                     okHttpWebSocket?.reconnect()
                 }
             }
@@ -74,8 +80,8 @@ class ReceiverActivity : AppCompatActivity() {
             override fun surfaceDestroyed(holder: SurfaceHolder) {
                 logWarn("holder=0x${holder.hashCode().toHexString()}", clazzName = "SurfaceCallback")
                 surfaceHolder = null
-                decoder?.release()
-                decoder = null
+                videoDecoder?.release()
+                videoDecoder = null
             }
         })
 
@@ -167,13 +173,22 @@ class ReceiverActivity : AppCompatActivity() {
                 // surface
                 resetSurfaceViewSize(width, height)
                 // decoder
-                initDecoder(width, height, bitrate, csd0, csd1, surfaceHolder!!.surface)
+                initVideoDecoder(width, height, bitrate, csd0, csd1, surfaceHolder!!.surface)
             },
             onVideoConfigReceived = { data, time ->
-                decoder?.feed(VideoConfigData(data, time))
+                videoDecoder?.feed(ConfigFrameData(data, time))
             },
             onVideoFrameReceived = { data, time, isKeyFrame ->
-                decoder?.feed(VideoFrameData(data, time, isKeyFrame))
+                videoDecoder?.feed(ContentFrameData(data, time, isKeyFrame))
+            },
+            onAudioFormatReceived = { bitrate, csd0 ->
+                initAudioDecoder(bitrate, csd0)
+            },
+            onAudioConfigReceived = { data, time ->
+                audioDecoder?.feed(ConfigFrameData(data, time))
+            },
+            onAudioFrameReceived = { data, time, isKeyFrame ->
+                audioDecoder?.feed(ContentFrameData(data, time, isKeyFrame))
             },
             onDisconnected = { reason ->
                 updateStatus("已断开: $reason")
@@ -186,7 +201,7 @@ class ReceiverActivity : AppCompatActivity() {
             }
     }
 
-    private fun initDecoder(
+    private fun initVideoDecoder(
         width: Int,
         height: Int,
         bitrate: Int,
@@ -194,20 +209,26 @@ class ReceiverActivity : AppCompatActivity() {
         csd1: ByteArray,
         surface: Surface,
     ) {
-        decoder?.release()
-        decoder = VideoDecoder.create(surface, width, height, bitrate, csd0, csd1)
-        decoder?.start()
+        videoDecoder?.release()
+        videoDecoder = VideoDecoder.create(surface, width, height, bitrate, csd0, csd1)
+        videoDecoder?.start()
         updateStatus("解码器已启动 ${width}x${height}")
 
         placeHolder.fadeOut()
+    }
+
+    private fun initAudioDecoder(bitrate: Int, csd0: ByteArray) {
+        audioDecoder?.release()
+        audioDecoder = AudioDecoder.create(bitrate, csd0, 160_000)//TODO: sampleRate
+        audioDecoder?.start()
     }
 
     private fun disconnect() {
         logInfo()
         okHttpWebSocket?.disconnect()
         okHttpWebSocket = null
-        decoder?.release()
-        decoder = null
+        videoDecoder?.release()
+        videoDecoder = null
         updateStatus("已断开")
 
         placeHolder.fadeIn()

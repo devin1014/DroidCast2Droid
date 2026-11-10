@@ -5,6 +5,8 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.drawable.GradientDrawable
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.os.Handler
@@ -42,6 +44,7 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
 
     private val handler = Handler(Looper.getMainLooper())
     private val simpleDateFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
+    private var mediaPlayer: MediaPlayer? = null
 
     private val screenCaptureLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -71,12 +74,12 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
 
     private val screenCaptureConnection = object : ServiceBinderConnection<ScreenCaptureService>() {
         override fun onServiceConnected(service: ScreenCaptureService) {
-            service.captureManager?.callback = this@SenderActivity
+            service.callback = this@SenderActivity
             screenCaptureService = service
         }
 
         override fun onServiceDisconnected(service: ScreenCaptureService) {
-            screenCaptureService?.captureManager?.callback = null
+            screenCaptureService?.callback = null
             screenCaptureService = null
         }
     }
@@ -116,6 +119,22 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
         startForegroundServiceCompat<WebSocketService>(this)
         bindServiceCompat<WebSocketService>(this, websocketConnection)
         handler.post(this)
+        startMusic()
+    }
+
+    private fun startMusic() {
+        mediaPlayer?.release()
+
+        mediaPlayer = MediaPlayer.create(this, R.raw.water).apply {
+            isLooping = true
+            setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            start()
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -135,6 +154,10 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
         // websocket service
         websocketConnection.unbindService(this)
         stopServiceCompat<WebSocketService>(this)
+
+        // release media
+        mediaPlayer?.release()
+        mediaPlayer = null
 
         super.onDestroy()
     }

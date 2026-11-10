@@ -7,6 +7,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 class EncodeThread(
+    private val sampleRate: Int,
     private val codec: MediaCodec,
     private val pcmQueue: LinkedBlockingQueue<Pair<ByteArray, Int>>,
     private val freeInputBuffers: LinkedBlockingQueue<Int>,
@@ -18,9 +19,8 @@ class EncodeThread(
     }
 
     override fun run() {
-        logInfo("[${Thread.currentThread().name}]start...", "thread")
+        logInfo("[${currentThread().name}]start...", "thread")
         var pts = 0L
-        val sampleRate = 44100
         val bytesPerSample = 2 // 16bit mono
 
         val result = runCatching {
@@ -39,9 +39,9 @@ class EncodeThread(
                 inputBuffer.put(pcm, 0, toWrite)
                 codec.queueInputBuffer(index, 0, toWrite, pts, 0)
                 pts += toWrite.toLong() * 1_000_000L / (sampleRate * bytesPerSample)
-                logInfo("[${Thread.currentThread().name}]queueInputBuffer=${toWrite}", "thread")
+//                logInfo("[${currentThread().name}]queueInputBuffer=${toWrite}", "thread")
             }
-            logInfo("[${Thread.currentThread().name}]done...", "thread")
+            logInfo("[${currentThread().name}]done...", "thread")
         }
         if (result.isFailure) {
             logError("error= ${result.exceptionOrNull()}")

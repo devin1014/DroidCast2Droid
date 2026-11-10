@@ -1,6 +1,7 @@
 package com.devin.android.mycastdemo.sender.audio
 
 import android.media.AudioRecord
+import com.devin.android.cast.core.chunked
 import com.devin.android.cast.core.logDebug
 import com.devin.android.cast.core.logError
 import com.devin.android.cast.core.logInfo
@@ -22,19 +23,25 @@ class AudioCaptureThread(
             val buffer = ByteArray(4096)
             audioRecord.startRecording()
 
-            while (!Thread.currentThread().isInterrupted) {
+            while (!currentThread().isInterrupted) {
                 val read = audioRecord.read(buffer, 0, buffer.size)
-                logDebug("read: $read", "thread")
                 if (read <= 0) continue
                 val copy = buffer.copyOf(read)
 
+//                logDebug(
+//                    "audio record =>\n    ${
+//                        copy.chunked(256).joinToString("\n    ") { chunk ->
+//                            chunk.joinToString(" ") { "%02x".format(it) }
+//                        }
+//                    }"
+//                )
                 // 队列满时丢弃旧数据，避免延迟累积
                 if (!pcmQueue.offer(copy to read)) {
                     pcmQueue.poll()
                     pcmQueue.offer(copy to read)
                 }
             }
-            logInfo("[${Thread.currentThread().name}]done...", "thread")
+            logInfo("[${currentThread().name}]done...", "thread")
         }
         if (result.isFailure) {
             logError("error= ${result.exceptionOrNull()}")

@@ -38,6 +38,7 @@ interface OnCodecOutputCallback {
 
 class CaptureManager private constructor(
     val mediaProjection: MediaProjection,
+    private val callback: OnCodecOutputCallback,
 ) {
     companion object {
         private const val MIME_TYPE_VIDEO = "video/avc"
@@ -47,13 +48,14 @@ class CaptureManager private constructor(
 
         fun create(
             service: ScreenCaptureService,
+            callback: OnCodecOutputCallback,
             resultCode: Int,
             resultData: Intent,
         ): CaptureManager? {
             return try {
                 val projection = (service.getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager)
                     .getMediaProjection(resultCode, resultData)
-                projection?.let { CaptureManager(it) }
+                projection?.let { CaptureManager(it, callback) }
             } catch (e: Exception) {
                 Timber.e("getMediaProjection failed: $e")
                 return null
@@ -63,7 +65,6 @@ class CaptureManager private constructor(
 
     private var virtualDisplay: VirtualDisplay? = null
     private var encoder: MediaCodec? = null
-    var callback: OnCodecOutputCallback? = null
     private var curOutputFormatData: ByteArray? = null
     private var screenConfig: CaptureConfig? = null
 
@@ -88,7 +89,7 @@ class CaptureManager private constructor(
         }
 
         override fun onInputBufferAvailable(codec: MediaCodec, index: Int) {
-            logInfo("index=$index", clazzName = "MediaCodec-Callback-V")
+//            logInfo("index=$index", clazzName = "MediaCodec-Callback-V")
         }
 
         override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: BufferInfo) {
@@ -107,7 +108,7 @@ class CaptureManager private constructor(
                         } else {
                             FrameProtocol.packVideoFrame(data, info.presentationTimeUs, true)
                         }
-                    callback?.onOutputBufferUpdate(videoBytes)
+                    callback.onOutputBufferUpdate(videoBytes)
                 }
             } else {
                 if (info.size > 0) {
@@ -117,7 +118,7 @@ class CaptureManager private constructor(
                         outputBuffer.position(info.offset)
                         outputBuffer.get(data)
                         val videoBytes = FrameProtocol.packVideoFrame(data, info.presentationTimeUs, false)
-                        callback?.onOutputBufferUpdate(videoBytes)
+                        callback.onOutputBufferUpdate(videoBytes)
                     }
                 }
             }
@@ -147,11 +148,12 @@ class CaptureManager private constructor(
                 ByteArray(it.remaining()).also { bytes -> it.get(bytes) }
             } ?: byteArrayOf()
 
-            callback?.onOutputBufferUpdate(
+            callback.onOutputBufferUpdate(
                 FrameProtocol.packVideoFormat(width, height, bitrate, csd0Bytes, csd1Bytes).also {
                     curOutputFormatData = it
                 }
             )
+            logInfo("csd0= ${csd0Bytes.joinToString("") { "%02x".format(it) }}", "MediaCodec-Callback-V")
         }
     }
 
@@ -284,7 +286,7 @@ class CaptureManager private constructor(
     fun notifyOutputFormat() {
         curOutputFormatData?.also { bytes ->
             logInfo("resend output format data...")
-            callback?.onOutputBufferUpdate(bytes)
+            callback.onOutputBufferUpdate(bytes)
         }
         encoder?.setParameters(
             Bundle().apply {
