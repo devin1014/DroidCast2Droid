@@ -14,6 +14,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.devin.android.cast.core.Constants
 import com.devin.android.cast.core.Constants.URL_HOLDER
 import com.devin.android.cast.core.Utils
+import com.devin.android.cast.core.broadcast.LocalNsdManager
+import com.devin.android.cast.core.broadcast.UdpDiscoveryClient
 import com.devin.android.cast.core.logInfo
 import com.devin.android.cast.core.logWarn
 import com.devin.android.mycastdemo.receiver.FrameData.ConfigFrameData
@@ -31,6 +33,7 @@ class ReceiverActivity : AppCompatActivity() {
     private var okHttpWebSocket: OkHttpWebSocket? = null
     private var videoDecoder: VideoDecoder? = null
     private var audioDecoder: AudioDecoder? = null
+    private val udpDiscoveryClient = UdpDiscoveryClient()
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -61,6 +64,12 @@ class ReceiverActivity : AppCompatActivity() {
             AudioTrackSample.play()
         }
 
+        findViewById<View>(R.id.btnSearchDevice).setOnClickListener {
+            udpDiscoveryClient.discoverByUdp(this) { list ->
+                Constants.serverUrls = list.map { it.ip }
+            }
+        }
+
         surfaceView.holder.addCallback(object : Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 logInfo("holder=0x${holder.hashCode().toHexString()}", clazzName = "SurfaceCallback")
@@ -86,6 +95,22 @@ class ReceiverActivity : AppCompatActivity() {
         })
 
         resetDisplaySizeInfo()
+
+        LocalNsdManager.searchService(this) { serviceInfo ->
+            val serverUrl = URL_HOLDER.replace("@ip", serviceInfo.host.hostName.removePrefix("/"))
+            urlEditView.setText(serverUrl)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        udpDiscoveryClient.discoverByUdp(this) { list ->
+            Constants.serverUrls = list.map { it.ip }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
     }
 
     private var formatWidth: Int = 0

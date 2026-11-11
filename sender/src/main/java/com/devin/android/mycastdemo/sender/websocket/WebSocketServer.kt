@@ -23,7 +23,7 @@ class WebSocketServer(
     }
 
     init {
-        logInfo("init SenderWebSocketServer")
+        logInfo()
         isReuseAddr = true
     }
 

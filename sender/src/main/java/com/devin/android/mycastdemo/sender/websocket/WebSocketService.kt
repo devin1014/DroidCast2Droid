@@ -16,6 +16,7 @@ class WebSocketService : BaseService() {
     companion object {
         private const val CHANNEL_ID = "websocket_server_channel"
         private const val NOTIFICATION_ID = 2001
+        private const val PORT = 8080
     }
 
     private var wsServer: WebSocketServer? = null
@@ -49,7 +50,7 @@ class WebSocketService : BaseService() {
         logInfo()
         if (wsServer == null) {
             WebSocketServer(
-                port = 8080,
+                port = PORT,
                 callback = object : WebSocketServerCallback {
                     override fun onClientConnected(conn: WebSocket) {
                         webSocketServerCallback?.onClientConnected(conn)

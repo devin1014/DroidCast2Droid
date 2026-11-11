@@ -9,14 +9,23 @@ import androidx.core.text.isDigitsOnly
 import timber.log.Timber
 import java.util.logging.Level
 
+inline fun Any.getLogText(
+    message: String = "",
+    clazzName: String? = null,
+): Pair<String, String> {
+    val trace = Throwable().stackTrace[0]
+    val className = clazzName ?: this::class.simpleName ?: parentClassName(trace.className.substringAfterLast("."))
+    val methodName = parseMethodName(trace.methodName)
+    val symbolic = if (methodName.isNotEmpty() && message.isNotEmpty()) "=>" else ""
+    val text = "${methodName}$symbolic${message}"
+    return className to text
+}
+
 inline fun Any.logDebug(
     message: String = "",
     clazzName: String? = null,
 ) {
-    val trace = Throwable().stackTrace[0]
-    val className = clazzName ?: this::class.simpleName ?: parentClassName(trace.className.substringAfterLast("."))
-    val methodName = parseMethodName(trace.methodName)
-    val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: ""}"
+    val (className, text) = getLogText(message, clazzName)
     log(className, text, Level.CONFIG)
 }
 
@@ -24,10 +33,7 @@ inline fun Any.logInfo(
     message: String = "",
     clazzName: String? = null,
 ) {
-    val trace = Throwable().stackTrace[0]
-    val className = clazzName ?: this::class.simpleName ?: parentClassName(trace.className.substringAfterLast("."))
-    val methodName = parseMethodName(trace.methodName)
-    val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: ""}"
+    val (className, text) = getLogText(message, clazzName)
     log(className, text, Level.INFO)
 }
 
@@ -35,10 +41,7 @@ inline fun Any.logWarn(
     message: String = "",
     clazzName: String? = null,
 ) {
-    val trace = Throwable().stackTrace[0]
-    val className = clazzName ?: this::class.simpleName ?: parentClassName(trace.className.substringAfterLast("."))
-    val methodName = parseMethodName(trace.methodName)
-    val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { ": $it" } ?: ""}"
+    val (className, text) = getLogText(message, clazzName)
     log(className, text, Level.WARNING)
 }
 
@@ -46,10 +49,7 @@ inline fun Any.logError(
     message: String = "",
     clazzName: String? = null,
 ) {
-    val trace = Throwable().stackTrace[0]
-    val className = clazzName ?: this::class.simpleName ?: parentClassName(trace.className.substringAfterLast("."))
-    val methodName = parseMethodName(trace.methodName)
-    val text = "$methodName${message.takeIf { it.isNotEmpty() }?.let { "=> $it" } ?: ""}"
+    val (className, text) = getLogText(message, clazzName)
     log(className, text, Level.SEVERE)
 }
 

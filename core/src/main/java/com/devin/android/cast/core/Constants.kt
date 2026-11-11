@@ -7,5 +7,5 @@ object Constants {
     const val IP_ADDRESS_5_151 = "192.168.5.151" // device-3: Samsung note 3
     const val URL_HOLDER = "ws://@ip:8080/stream"
 
-    val serverUrls: List<String> = listOf(IP_ADDRESS_5_126, IP_ADDRESS_5_147, IP_ADDRESS_5_151)
+    var serverUrls: List<String> = listOf(IP_ADDRESS_5_126, IP_ADDRESS_5_147, IP_ADDRESS_5_151)
 }

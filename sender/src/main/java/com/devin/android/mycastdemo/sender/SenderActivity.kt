@@ -8,6 +8,8 @@ import android.graphics.drawable.GradientDrawable
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.projection.MediaProjectionManager
+import android.net.nsd.NsdManager.RegistrationListener
+import android.net.nsd.NsdServiceInfo
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -19,6 +21,11 @@ import androidx.appcompat.app.AppCompatActivity
 import com.devin.android.cast.core.Constants.URL_HOLDER
 import com.devin.android.cast.core.Utils
 import com.devin.android.cast.core.bindServiceCompat
+import com.devin.android.cast.core.broadcast.LocalNsdManager
+import com.devin.android.cast.core.broadcast.UdpDiscoveryServer
+import com.devin.android.cast.core.logError
+import com.devin.android.cast.core.logInfo
+import com.devin.android.cast.core.network.NetworkUtils
 import com.devin.android.cast.core.service.ServiceBinderConnection
 import com.devin.android.cast.core.startForegroundServiceCompat
 import com.devin.android.cast.core.stopServiceCompat
@@ -45,6 +52,7 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
     private val handler = Handler(Looper.getMainLooper())
     private val simpleDateFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
     private var mediaPlayer: MediaPlayer? = null
+    private var udpDiscoveryServer = UdpDiscoveryServer(8080)
 
     private val screenCaptureLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -96,13 +104,31 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
         }
     }
 
+    private val nsdListener = object : RegistrationListener {
+        override fun onServiceRegistered(serviceInfo: NsdServiceInfo) {
+            logInfo()
+        }
+
+        override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {
+            logInfo()
+        }
+
+        override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+            logError("errorCode=$errorCode")
+        }
+
+        override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+            logError("errorCode=$errorCode")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sender)
 
 
         findViewById<TextView>(R.id.tvAddress).apply {
-            val serverUrl = URL_HOLDER.replace("@ip", Utils.getLocalIpAddress() ?: "unknown")
+            val serverUrl = URL_HOLDER.replace("@ip", NetworkUtils.getLocalIpAddress() ?: "unknown")
             text = serverUrl
         }
         findViewById<View>(R.id.btnStart).setOnClickListener {
@@ -135,6 +161,18 @@ class SenderActivity : AppCompatActivity(), WebSocketServerCallback, Runnable, O
             )
             start()
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        LocalNsdManager.registerService(this, nsdListener)
+        udpDiscoveryServer.start(this)
+    }
+
+    override fun onStop() {
+        LocalNsdManager.unregisterService(this, nsdListener)
+        udpDiscoveryServer.stop()
+        super.onStop()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

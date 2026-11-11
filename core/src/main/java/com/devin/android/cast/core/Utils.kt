@@ -10,8 +10,6 @@ import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowMetrics
 import androidx.core.content.edit
-import java.net.Inet4Address
-import java.net.NetworkInterface
 
 object Utils {
     fun getScreenSize(context: Context): Triple<Int, Int, Int> {
@@ -58,39 +56,6 @@ object Utils {
         } finally {
             typedArray?.recycle()
         }
-    }
-
-    fun getLocalIpAddress(): String? {
-        try {
-            var ipAddress: String? = ""
-            val interfaces = NetworkInterface.getNetworkInterfaces()
-            while (interfaces.hasMoreElements()) {
-                val networkInterface = interfaces.nextElement()
-
-                // 跳过未启用或回环接口
-                if (!networkInterface.isUp || networkInterface.isLoopback) continue
-
-                val addresses = networkInterface.inetAddresses
-                while (addresses.hasMoreElements()) {
-                    val address = addresses.nextElement()
-                    logInfo(
-                        "[${networkInterface.index}]${networkInterface.displayName ?: networkInterface.name} " +
-                                "${address.hostAddress}"
-                    )
-                    if (address is Inet4Address && !address.isLoopbackAddress) {
-                        // 过滤掉 169.254.x.x 链路本地地址
-                        if (!address.isLinkLocalAddress) {
-                            // 这里可以直接返回，不用遍历全部，这里是为了打印所有ip地址。
-                            ipAddress = address.hostAddress
-                        }
-                    }
-                }
-            }
-            return ipAddress
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return null
     }
 
     fun putUrl2SharePreference(context: Context, url: String) {
