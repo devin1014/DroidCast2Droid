@@ -17,7 +17,6 @@ import android.media.MediaFormat
 import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.os.Build
-import android.os.Bundle
 import androidx.core.content.ContextCompat
 import com.devin.android.cast.core.FrameProtocol
 import com.devin.android.cast.core.logDebug
@@ -227,11 +226,5 @@ class RecordAudioManager(
         curOutputFormatData?.also { bytes ->
             callback.onOutputBufferUpdate(bytes)
         }
-        //TODO: check audio need this?
-        mediaCodec?.setParameters(
-            Bundle().apply {
-                putInt(MediaCodec.PARAMETER_KEY_REQUEST_SYNC_FRAME, 0)
-            }
-        )
     }
 }

@@ -156,7 +156,7 @@ class ScreenCaptureService : BaseService(), OnCodecOutputCallback {
         val (width, height, densityDpi) = Utils.getScreenSize(applicationContext)
         manager.start(
             applicationContext,
-            CaptureConfig(width, height, densityDpi)
+            config = CaptureConfig(width, height, densityDpi, 1080)
         )
 
         RecordAudioManager(callback = this).also { audioManager ->

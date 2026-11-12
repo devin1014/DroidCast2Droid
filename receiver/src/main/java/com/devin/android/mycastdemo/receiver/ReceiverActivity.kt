@@ -1,5 +1,7 @@
 package com.devin.android.mycastdemo.receiver
 
+import android.net.wifi.WifiManager
+import android.net.wifi.WifiManager.WifiLock
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -21,6 +23,10 @@ import com.devin.android.cast.core.logWarn
 import com.devin.android.mycastdemo.receiver.FrameData.ConfigFrameData
 import com.devin.android.mycastdemo.receiver.FrameData.ContentFrameData
 import com.devin.android.mycastdemo.receiver.audio.AudioTrackSample
+import com.devin.android.mycastdemo.receiver.view.BitrateChartView
+import com.devin.android.mycastdemo.receiver.view.FpsChartView
+import java.math.RoundingMode
+import java.text.DecimalFormat
 
 class ReceiverActivity : AppCompatActivity() {
 
@@ -28,6 +34,8 @@ class ReceiverActivity : AppCompatActivity() {
     private val tvDisplayInfo: TextView by lazy { findViewById(R.id.tvSizeInfo) }
     private val placeHolder: View by lazy { findViewById(R.id.surfaceViewPlaceHolder) }
     private val surfaceView: SurfaceView by lazy { findViewById(R.id.surfaceView) }
+    private val bitrateChartView: BitrateChartView? by lazy { findViewById(R.id.bitrateChartView) }
+    private val fpsChartView: FpsChartView? by lazy { findViewById(R.id.fpsChartView) }
 
     private var surfaceHolder: SurfaceHolder? = null
     private var okHttpWebSocket: OkHttpWebSocket? = null
@@ -35,11 +43,40 @@ class ReceiverActivity : AppCompatActivity() {
     private var audioDecoder: AudioDecoder? = null
     private val udpDiscoveryClient = UdpDiscoveryClient()
 
+    private val wifiLock: WifiLock by lazy {
+        (getSystemService(WIFI_SERVICE) as WifiManager)
+            .createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "mirror_lock")
+    }
+    private var receiverMonitor = ReceiverMonitor()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val decimalFormat = DecimalFormat("#.##").apply {
+        roundingMode = RoundingMode.HALF_UP
+    }
+
+    private val reportRunnable = object : Runnable {
+        override fun run() {
+            if (isFinishing || isDestroyed) {
+                logWarn("${ReceiverActivity::class.simpleName} is closed.")
+                return
+            }
+            val monitor = receiverMonitor
+            val bitrateKbps = monitor.getBitrate()
+            val fps = monitor.getFps()
+            logInfo(
+                "bitrateKbps=${decimalFormat.format(bitrateKbps)}," +
+                        " fps=${decimalFormat.format(fps)}", clazzName = "Monitor"
+            )
+            bitrateChartView?.push(bitrateKbps)
+            fpsChartView?.push(fps)
+            mainHandler.postDelayed(this, 2000)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_receiver)
+
+        wifiLock.acquire()
 
         val urlEditView = findViewById<EditText>(R.id.etUrl)
         urlEditView.setText(Utils.getSharePreferenceUrl(this))
@@ -186,10 +223,15 @@ class ReceiverActivity : AppCompatActivity() {
         updateStatus("连接中...")
         logInfo(url)
 
+        mainHandler.removeCallbacks(reportRunnable)
+
         OkHttpWebSocket(
-            url,
+            url = url,
+            monitor = receiverMonitor,
             onConnected = {
                 updateStatus("已连接，等待推流配置")
+                mainHandler.postDelayed(reportRunnable, 5000L)
+                receiverMonitor.clear()
             },
             onVideoFormatReceived = { width, height, bitrate, csd0, csd1 ->
                 formatWidth = width
@@ -235,7 +277,7 @@ class ReceiverActivity : AppCompatActivity() {
         surface: Surface,
     ) {
         videoDecoder?.release()
-        videoDecoder = VideoDecoder.create(surface, width, height, bitrate, csd0, csd1)
+        videoDecoder = VideoDecoder.create(surface, width, height, bitrate, csd0, csd1, receiverMonitor)
         videoDecoder?.start()
         updateStatus("解码器已启动 ${width}x${height}")
 
@@ -266,6 +308,7 @@ class ReceiverActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         disconnect()
+        wifiLock.release()
     }
 
     private fun View.fadeOut(duration: Long = 500L) {

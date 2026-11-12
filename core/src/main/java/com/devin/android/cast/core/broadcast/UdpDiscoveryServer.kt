@@ -1,7 +1,6 @@
 package com.devin.android.cast.core.broadcast
 
 import android.content.Context
-import android.net.wifi.WifiManager
 import android.os.Build
 import com.devin.android.cast.core.logDebug
 import com.devin.android.cast.core.logError
@@ -16,7 +15,6 @@ class UdpDiscoveryServer(
 ) {
     private var socket: DatagramSocket? = null
     private var running = false
-    private var lock: WifiManager.MulticastLock? = null
 
     fun start(context: Context) {
         logInfo()
@@ -24,10 +22,6 @@ class UdpDiscoveryServer(
             try {
                 socket = DatagramSocket(port)
                 logInfo("create DatagramSocket($port)")
-                val wifiManager = context.applicationContext
-                    .getSystemService(Context.WIFI_SERVICE) as WifiManager
-                lock = wifiManager.createMulticastLock("udp_discovery_lock")
-                lock?.acquire()
 
                 running = true
                 val buf = ByteArray(1024)
@@ -74,6 +68,5 @@ class UdpDiscoveryServer(
         running = false
         socket?.close()
         socket = null
-        lock?.release()
     }
 }

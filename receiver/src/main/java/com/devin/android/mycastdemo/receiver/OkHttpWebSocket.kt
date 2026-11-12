@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit
 
 class OkHttpWebSocket(
     private val url: String,
+    private val monitor: ReceiverMonitor,
     private val onConnected: () -> Unit,
     private val onVideoFormatReceived: (width: Int, height: Int, bitrate: Int, csd0: ByteArray, csd1: ByteArray) -> Unit,
     private val onVideoConfigReceived: (data: ByteArray, presentationTimeUs: Long) -> Unit,
@@ -90,6 +91,8 @@ class OkHttpWebSocket(
             logWarn("数据不完整，期望载荷: " + payloadLen + ", 实际剩余: " + byteBuffer.remaining(), clazzName = "${WebSocketListener::class.simpleName}")
             return
         }
+
+        monitor.onBytesReceived(bytes.toByteArray().size)
 
         // 5. 根据类型进行分流解析
         when (type) {

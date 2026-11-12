@@ -13,6 +13,16 @@
         android:orientation="vertical"
         app:layout_constraintGuide_percent="0.4" />
 
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_margin="1px"
+        android:background="@drawable/bg_box_border"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/receiverGuideline"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <ImageView
         android:id="@+id/btnUrl"
         android:layout_width="wrap_content"
@@ -117,6 +127,50 @@
         app:layout_constraintTop_toBottomOf="@id/tvStatus"
         tools:ignore="SpUsage"
         tools:text="Tv info" />
+
+    <TextView
+        android:id="@+id/bitrateLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Bitrate"
+        android:textAllCaps="false"
+        android:textColor="#000"
+        android:textSize="12dp"
+        app:layout_constraintStart_toStartOf="@id/etUrl"
+        app:layout_constraintTop_toBottomOf="@id/tvSizeInfo" />
+
+    <com.devin.android.mycastdemo.receiver.view.BitrateChartView
+        android:id="@+id/bitrateChartView"
+        android:layout_width="0dp"
+        android:layout_height="180dp"
+        android:layout_marginEnd="6dp"
+        android:background="#cc000000"
+        app:layout_constraintEnd_toEndOf="@id/receiverGuideline"
+        app:layout_constraintStart_toStartOf="@id/etUrl"
+        app:layout_constraintTop_toBottomOf="@id/bitrateLabel" />
+
+    <TextView
+        android:id="@+id/fpsLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Fps"
+        android:textAllCaps="false"
+        android:textColor="#000"
+        android:textSize="12dp"
+        app:layout_constraintStart_toStartOf="@id/etUrl"
+        app:layout_constraintTop_toBottomOf="@id/bitrateChartView" />
+
+    <com.devin.android.mycastdemo.receiver.view.FpsChartView
+        android:id="@+id/fpsChartView"
+        android:layout_width="0dp"
+        android:layout_height="180dp"
+        android:layout_marginEnd="6dp"
+        android:background="#cc000000"
+        app:layout_constraintEnd_toEndOf="@id/receiverGuideline"
+        app:layout_constraintStart_toStartOf="@id/etUrl"
+        app:layout_constraintTop_toBottomOf="@id/fpsLabel" />
 
     <SurfaceView
         android:id="@+id/surfaceView"

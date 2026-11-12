@@ -11,7 +11,9 @@ import com.devin.android.mycastdemo.receiver.FrameData.ConfigFrameData
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class VideoDecoder private constructor() : Thread() {
+class VideoDecoder private constructor(
+    private val monitor: ReceiverMonitor,
+) : Thread() {
     companion object {
         private const val MIME_TYPE = "video/avc"
         private const val TIMEOUT_US = 10_000L
@@ -23,6 +25,7 @@ class VideoDecoder private constructor() : Thread() {
             bitrate: Int,
             csd0: ByteArray,
             csd1: ByteArray,
+            monitor: ReceiverMonitor,
         ): VideoDecoder? {
             return try {
                 val codec = MediaCodec.createDecoderByType(MIME_TYPE)
@@ -50,7 +53,7 @@ class VideoDecoder private constructor() : Thread() {
                 }
                 // 2. 配置解码器
                 codec.configure(format, surface, null, 0)
-                VideoDecoder().apply {
+                VideoDecoder(monitor).apply {
                     this.mediaCodec = codec
                     codec.start()
                     logInfo("MediaCodec start success!", clazzName = "${VideoDecoder::class.simpleName}")
@@ -182,6 +185,8 @@ class VideoDecoder private constructor() : Thread() {
                                 logDebug("★ output ==> size: ${info.size}, pts: ${info.presentationTimeUs}, flags: ${info.flags}", clazzName = "${VideoDecoder::class.simpleName}")
                                 // true 表示直接让 MediaCodec 把这一帧的数据渲染到你绑定的 Surface/TextureView 上
                                 codec.releaseOutputBuffer(outputIndex, true)
+
+                                monitor.onFrameRendered()
 
                                 if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                                     interrupted()
