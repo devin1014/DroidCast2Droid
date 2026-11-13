@@ -19,6 +19,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyCastDemo"
         android:usesCleartextTraffic="true">
+        <profileable android:shell="true" />
         <activity
             android:name=".sender.SenderActivity"
             android:configChanges="screenLayout|screenSize|orientation|keyboardHidden|keyboard|smallestScreenSize"
