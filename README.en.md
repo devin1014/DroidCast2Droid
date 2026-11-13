@@ -17,9 +17,10 @@
 
 ## Demo
 
-| Device Discovery | Casting |
-| :---: | :---: |
+|              Device Discovery              |                  Casting                   |
+|:------------------------------------------:|:------------------------------------------:|
 | <img src="screenshot/s_1.png" width="200"> | <img src="screenshot/s_2.png" width="200"> |
+| <img src="screenshot/r_1.png" width="200"> | <img src="screenshot/r_2.png" width="200"> |
 
 ## Getting Started
 
