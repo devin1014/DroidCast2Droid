@@ -1,16 +1,13 @@
-##  English Version: `README.en.md`
-
-```markdown
 # MyCast
 
 > LAN-based Android-to-Android screen casting with MediaProjection + MediaCodec + WebSocket
 
-[![Android](https://img.shields.io/badge/Android-24%2B-green.svg)](https://developer.android.com)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[简体中文](README.md) | [English](README.en.md)
 
-[中文文档](README.md) | **English**
+![Android](https://developer.android.com)
+![License](LICENSE)
 
-##  Features
+## Features
 
 - **Auto Discovery**: mDNS / UDP broadcast based, zero configuration within LAN
 - **Real-time Casting**: MediaProjection capture + MediaCodec hardware H.264 encoding, low end-to-end latency
@@ -18,13 +15,13 @@
 - **Dual-role Codebase**: Same codebase, roles distinguished by `sender` / `receiver` modules
 - **Network Friendly**: Dynamic bitrate adaptation and keyframe request support
 
-##  Demo
+## Demo
 
 | Device Discovery | Casting |
 | :---: | :---: |
-| <img src="screenshot/s_1.ppg" width="200"> | <img src="screenshot/s_2.png" width="200"> |
+| <img src="screenshot/s_1.png" width="200"> | <img src="screenshot/s_2.png" width="200"> |
 
-##  Getting Started
+## Getting Started
 
 ### Requirements
 
@@ -35,7 +32,7 @@
 ### Build & Run
 
 ```bash
-git clone https://github.com/devin1014/MyCast.git
+git clone https://github.com/your-name/MyCast.git
 cd MyCast
 ./gradlew assembleDebug
 ```
@@ -56,11 +53,11 @@ adb install receiver/build/outputs/apk/debug/receiver-debug.apk
 3. Launch the App on the sender — it automatically discovers the receiver
 4. Tap the device name, grant recording permission, and casting begins
 
-## ️ Architecture
+## Architecture
 
 ```
 ┌─────────────┐         WebSocket (TCP)         ┌──────────────┐
-│   Sender    │  ──────────────────────────────  │   Receiver   │
+│   Sender    │  ──────────────────────────────> │   Receiver   │
 │             │                                   │              │
 │ MediaProjection                             MediaCodec
 │   ↓ Capture                                     ↓ Decode
@@ -121,7 +118,7 @@ Custom binary frame header carrying timestamp, keyframe flag and sequence number
 | magic(2B) | version(1B) | flags(1B) | seq(4B) | pts(8B) | payloadLen(4B) | payload |
 ```
 
-## ️ Configuration
+## Configuration
 
 Adjust in `CastConfig` of the `sender` module:
 
@@ -132,11 +129,11 @@ Adjust in `CastConfig` of the `sender` module:
 | `iframeInterval` | 1s | Keyframe interval; smaller improves packet-loss resilience but raises bitrate |
 | `detectWidth/Height` | 640×480 | Downsampled resolution for auxiliary detection |
 
-##  FAQ
+## FAQ
 
 ### Crash with `IllegalStateException` right after casting starts
 
-Usually a `MediaCodec` lifecycle issue: the callback fires after the codec has been `stop()`ed/`release()`d.
+Usually a `MediaCodec` lifecycle issue: the callback fires after the codec has been `stop()`ed / `release()`d.
 
 **Fix**: add a state guard and try-catch in the callback, and set `isRunning = false` **before** calling `stop()`:
 
@@ -168,13 +165,11 @@ override fun onOutputBufferAvailable(codec: MediaCodec, index: Int, info: MediaC
 
 Android 10+ restricts background `MediaProjection`. Keep the Activity in the foreground, or use a foreground service to stay alive.
 
-##  License
+## License
 
-MIT License. See LICENSE for details.
+MIT License. See [LICENSE](LICENSE) for details.
 
-##  Acknowledgements
+## Acknowledgements
 
 - [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket) — WebSocket implementation reference
-```
-
----
+- Thanks to all contributors who submitted Issues and PRs

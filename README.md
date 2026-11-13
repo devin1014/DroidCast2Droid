@@ -1,11 +1,8 @@
-##  中文版：`README.md`
-
-`[English](README.en.md)`
-
-```markdown
 # MyCast
 
 > 基于 MediaProjection + MediaCodec + WebSocket 的局域网安卓设备间投屏方案
+
+[简体中文](README.md) | [English](README.en.md)
 
 [![Android](https://img.shields.io/badge/Android-24%2B-green.svg)](https://developer.android.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -175,6 +172,3 @@ MIT License. See LICENSE for details.
 ##  致谢
 
 - [Java-WebSocket](https://github.com/TooTallNate/Java-WebSocket) — WebSocket 实现参考
-```
-
----
